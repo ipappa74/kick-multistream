@@ -92,28 +92,24 @@ body {
 .crt-scanlines {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 1;
   pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.05) 0px,
-    rgba(255, 255, 255, 0.05) 1px,
+    rgba(0, 0, 0, 0.3) 0px,
+    rgba(0, 0, 0, 0.3) 1px,
     transparent 1px,
-    transparent 3px
+    transparent 2px
   );
-  mix-blend-mode: overlay;
-  opacity: 0.10;
-  animation: crtFlicker 2.4s infinite ease-in-out;
+  opacity: 0.8;
+  animation: crtFlicker 0.15s infinite;
 }
 
 /* Flicker animation */
 @keyframes crtFlicker {
-  0%   { opacity: 0.10; }
-  20%  { opacity: 0.13; }
-  40%  { opacity: 0.09; }
-  60%  { opacity: 0.12; }
-  80%  { opacity: 0.11; }
-  100% { opacity: 0.10; }
+  0%   { opacity: 0.8; }
+  50%  { opacity: 0.85; }
+  100% { opacity: 0.8; }
 }
 
 /* ───────────────────────────────────────────── */

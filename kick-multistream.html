@@ -20,7 +20,7 @@
  GitHub Pages (Landing Page):
    https://ipappa74.github.io/kick-multistream/
 
- Kontakti:
+ Kontaktit:
    Email:    toni.spams@gmail.com
    GitHub:   https://github.com/ipappa74
    Kick:     https://kick.com/ipappa
@@ -932,6 +932,91 @@ iframe.stream-frame {
 }
 
 /* ───────────────────────────────────────────── */
+/* FOOTER */
+/* ───────────────────────────────────────────── */
+
+.footer-overlay {
+  text-align: center;
+  font-size: 12px;
+  color: #777;
+  background: rgba(10, 10, 10, 0.9);
+  padding: 6px 0;
+  border-top: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.footer-overlay a {
+  color: #5aff2f;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.footer-overlay a:hover {
+  text-shadow: 0 0 6px #5aff2f;
+}
+
+.footer-sep {
+  margin: 0 6px;
+  color: #555;
+}
+
+/* ───────────────────────────────────────────── */
+/* ABOUT DIALOG */
+/* ───────────────────────────────────────────── */
+
+.about-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.about-overlay.hidden {
+  display: none;
+}
+
+.about-dialog {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 18px 20px;
+  min-width: 260px;
+  max-width: 320px;
+  color: #eee;
+  text-align: left;
+  box-shadow: 0 0 18px #000;
+}
+
+.about-dialog h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #5aff2f;
+}
+
+.about-dialog a {
+  color: #5aff2f;
+  text-decoration: none;
+}
+
+.about-dialog a:hover {
+  text-decoration: underline;
+}
+
+.about-dialog button {
+  margin-top: 12px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ddd;
+  cursor: pointer;
+}
+
+/* ───────────────────────────────────────────── */
 /* RESPONSIVE (≤ 1200px) */
 /* ───────────────────────────────────────────── */
 
@@ -1008,6 +1093,12 @@ iframe.stream-frame {
 
 <div id="grid"></div>
 
+<div class="footer-overlay">
+  © 2026 Kick Multistream — Neon UI by Toni
+  <span class="footer-sep">•</span>
+  <a href="#" onclick="openAbout(); return false;">About</a>
+</div>
+
 <div id="addStreamDialog" class="add-dialog hidden">
   <div class="add-dialog-content">
     <h2 id="dialogTitle">Lisää striimi</h2>
@@ -1019,13 +1110,39 @@ iframe.stream-frame {
   </div>
 </div>
 
+<div id="aboutOverlay" class="about-overlay hidden">
+  <div class="about-dialog">
+    <h2>Kick Multistream</h2>
+    <p id="aboutVersion"></p>
+    <p>Tekijä: Toni, Oulu</p>
+    <p>
+	  Kick: <a href="https://kick.com/ipappa" target="_blank">ipappa</a><br>
+      Repo: <a href="https://github.com/ipappa74/kick-multistream" target="_blank">GitHub</a><br>
+      Sivusto: <a href="https://ipappa74.github.io/kick-multistream/" target="_blank">GitHub Pages</a>
+    </p>
+    <button onclick="closeAbout()">Sulje</button>
+  </div>
+</div>
+
 <script>
+// Sovelluksen metatiedot
+const APP_META = {
+  name: "Kick Multistream",
+  version: "1.0.0",
+  buildDate: "2026-04-28",
+  author: "Toni",
+  repo: "https://github.com/ipappa74/kick-multistream",
+  homepage: "https://ipappa74.github.io/kick-multistream/"
+};
+
+console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
+
   const MAX = 9;
   let count = 1;
   let zoomedSlot = -1;
 
   const channels  = Array(MAX).fill('');
-  const muted     = Array(MAX).fill(true);
+  let muted     = Array(MAX).fill(true); // Muutettu let jotta voidaan päivittää
   const chatOpen  = Array(MAX).fill(false);
   const liveStatus = {};
   const viewers    = {};
@@ -1033,8 +1150,10 @@ iframe.stream-frame {
   let selectedSlot = null;
   let favorites = JSON.parse(localStorage.getItem('kick-favs') || '[]');
   let autoLoadChannels = JSON.parse(localStorage.getItem('kick-auto-load-channels') || '{}');
-
   let dragSrcIndex = null;
+
+  // Lataa mute-tilat heti alustuksen jälkeen
+  loadState();
 
 	/* ===== DIALOG (UNIFIED) ===== */
 
@@ -1096,6 +1215,23 @@ iframe.stream-frame {
     }));
   }
 
+	// ======================================================
+	// ABOUT DIALOG
+	// ======================================================
+
+	function openAbout() {
+	  const overlay = document.getElementById("aboutOverlay");
+	  const ver = document.getElementById("aboutVersion");
+	  if (ver && APP_META) {
+		ver.textContent = `Versio: ${APP_META.version} (${APP_META.buildDate})`;
+	  }
+	  overlay.classList.remove("hidden");
+	}
+
+	function closeAbout() {
+	  document.getElementById("aboutOverlay").classList.add("hidden");
+	}
+
   function loadState() {
     try {
       const s = JSON.parse(localStorage.getItem('kick-state') || 'null');
@@ -1125,6 +1261,7 @@ iframe.stream-frame {
 	  document.querySelectorAll('.lbtn').forEach((b, i) => {
 		b.classList.toggle('active', [1,2,3,4,6,9][i] === n);
 	  });
+	  saveState(); // Tallenna uudelleen ennen renderGrid()
 	  renderGrid();
 	}
 
@@ -1267,6 +1404,32 @@ const frameContent = ch
       muteBtn.classList.toggle('active', muted[i] !== false);
       muteBtn.textContent = muted[i] !== false ? 'Unmute' : 'Mute';
     }
+    
+    // Kiertoratkaisu Kick API:n mute-nollaukselle - palauta muut slotit oikeaan tilaan
+    setTimeout(() => {
+      for (let j = 0; j < MAX; j++) {
+        if (j !== i && channels[j]) {
+          const otherMuteBtn = document.querySelector(`#slot-${j} .mute-btn`);
+          if (otherMuteBtn) {
+            // Varmista että slot on olemassa ennen napin päivittämistä
+            const slot = document.getElementById(`slot-${j}`);
+            if (slot && slot.querySelector('.stream-frame')) {
+              otherMuteBtn.classList.toggle('active', muted[j] !== false);
+              otherMuteBtn.textContent = muted[j] !== false ? 'Unmute' : 'Mute';
+              
+              // Jos striimi on unmuted ja jäänyt, lataa se uudelleen
+              if (muted[j] === false) {
+                const iframe = slot.querySelector('.stream-frame');
+                if (iframe) {
+                  const ch = channels[j];
+                  iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=false`;
+                }
+              }
+            }
+          }
+        }
+      }
+    }, 100);
   }
 
   function closeSlot(i) {
@@ -1508,7 +1671,6 @@ const frameContent = ch
     renderGrid();
   }
 
-  loadState();
   renderFavorites();
 
   document.querySelectorAll('.lbtn').forEach((b, i) => {
@@ -1517,6 +1679,104 @@ const frameContent = ch
 
   renderGrid();
   favorites.forEach(fav => checkLiveFavOnly(fav));
+
+  // Fullscreen-tapahtumien käsittely
+  document.addEventListener('fullscreenchange', () => {
+    saveState(); // Tallenna mute-tilat fullscreen-tilan muuttuessa
+  });
+
+  document.addEventListener('webkitfullscreenchange', () => {
+    saveState(); // Safari-tuki
+  });
+
+  document.addEventListener('mozfullscreenchange', () => {
+    saveState(); // Firefox-tuki
+  });
+
+  document.addEventListener('MSFullscreenChange', () => {
+    saveState(); // IE/Edge-tuki
+  });
+
+  // Window resize -tapahtuman käsittely
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      saveState(); // Tallenna mute-tilat resize-tapahtuman jälkeen
+      
+      // Kiertoratkaisu Kick API:n mute-nollaukselle - useita tarkistuksia
+      const fixMuteStates = () => {
+        for (let j = 0; j < MAX; j++) {
+          if (channels[j]) {
+            const muteBtn = document.querySelector(`#slot-${j} .mute-btn`);
+            if (muteBtn) {
+              const slot = document.getElementById(`slot-${j}`);
+              if (slot && slot.querySelector('.stream-frame')) {
+                const shouldBeMuted = muted[j] !== false;
+                const isCurrentlyMuted = muteBtn.classList.contains('active');
+                
+                // Päivitä vain jos tila on väärä
+                if (shouldBeMuted !== isCurrentlyMuted) {
+                  muteBtn.classList.toggle('active', shouldBeMuted);
+                  muteBtn.textContent = shouldBeMuted ? 'Unmute' : 'Mute';
+                  
+                  // Jos striimi on unmuted, lataa se uudelleen (mutta ei liian usein)
+                  if (!shouldBeMuted) {
+                    const iframe = slot.querySelector('.stream-frame');
+                    if (iframe && !iframe.dataset.reloading) {
+                      const ch = channels[j];
+                      // Estä liian useat uudelleenlataukset
+                      iframe.dataset.reloading = 'true';
+                      iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=false`;
+                      setTimeout(() => {
+                        delete iframe.dataset.reloading;
+                      }, 1000);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      };
+      
+      // Useita tarkistuksia eri viiveillä - erityinen käsittely ensimmäiselle striimille
+      const fixFirstSlot = () => {
+        if (channels[0]) {
+          const muteBtn = document.querySelector(`#slot-0 .mute-btn`);
+          if (muteBtn) {
+            const slot = document.getElementById('slot-0');
+            if (slot && slot.querySelector('.stream-frame')) {
+              const shouldBeMuted = muted[0] !== false;
+              muteBtn.classList.toggle('active', shouldBeMuted);
+              muteBtn.textContent = shouldBeMuted ? 'Unmute' : 'Mute';
+              
+              // Jos striimi on unmuted, lataa se uudelleen (mutta ei liian usein)
+              if (!shouldBeMuted) {
+                const iframe = slot.querySelector('.stream-frame');
+                if (iframe && !iframe.dataset.reloading) {
+                  const ch = channels[0];
+                  // Estä liian useat uudelleenlataukset
+                  iframe.dataset.reloading = 'true';
+                  iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=false`;
+                  setTimeout(() => {
+                    delete iframe.dataset.reloading;
+                  }, 1000);
+                }
+              }
+            }
+          }
+        }
+      };
+      
+      fixMuteStates();
+      fixFirstSlot(); // Välitön korjaus ensimmäiselle
+      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 25);
+      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 75);
+      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 150);
+      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 300);
+    }, 50); // Lyhyempi ensimmäinen viive
+  });
 
   for (let i = 0; i < count; i++) {
     if (channels[i]) checkLive(channels[i], i);
@@ -1530,6 +1790,7 @@ const frameContent = ch
     });
   }, 20000);
 
+  
 </script>
 
 </body>
