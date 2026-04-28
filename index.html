@@ -27,6 +27,28 @@ body {
 }
 
 /* ───────────────────────────────────────────── */
+/* ANIMATED NEON GRID BACKGROUND */
+/* ───────────────────────────────────────────── */
+
+.neon-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(90,255,47,0.12) 1px, transparent 1px),
+    linear-gradient(rgba(90,255,47,0.12) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridMove 18s linear infinite;
+  filter: drop-shadow(0 0 6px #5aff2f55);
+  opacity: 0.25;
+}
+
+@keyframes gridMove {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 60px 60px, 60px 60px; }
+}
+
+/* ───────────────────────────────────────────── */
 /* HERO SECTION */
 /* ───────────────────────────────────────────── */
 
@@ -95,6 +117,7 @@ body {
 </head>
 
 <body>
+<div class="neon-grid"></div>
 
 <div class="hero">
   <div class="title">KICK MULTISTREAM</div>
@@ -103,7 +126,7 @@ body {
     Katso useita striimejä, avaa chatit, järjestele slotteja ja seuraa LIVE‑tilaa reaaliajassa.
   </div>
 
-  <button class="launch-btn" onclick="location.href='kick-multistream.html'">
+  <button class="launch-btn" onclick="location.href='multistream.html'">
     🚀 Käynnistä sovellus
   </button>
 </div>
