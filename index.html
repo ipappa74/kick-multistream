@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Kick Multistream</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+/* ───────────────────────────────────────────── */
+/* GLOBAL */
+/* ───────────────────────────────────────────── */
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #050505;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #e6e6e6;
+  overflow-x: hidden;
+}
+
+/* Neon glow animation */
+@keyframes neonPulse {
+  0%   { text-shadow: 0 0 4px #5aff2f55, 0 0 8px #5aff2f33; }
+  50%  { text-shadow: 0 0 10px #5aff2f99, 0 0 18px #5aff2f55; }
+  100% { text-shadow: 0 0 4px #5aff2f55, 0 0 8px #5aff2f33; }
+}
+
+/* ───────────────────────────────────────────── */
+/* HERO SECTION */
+/* ───────────────────────────────────────────── */
+
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.title {
+  font-size: 64px;
+  font-weight: 900;
+  color: #5aff2f;
+  animation: neonPulse 2s infinite ease-in-out;
+  letter-spacing: 2px;
+}
+
+.subtitle {
+  margin-top: 10px;
+  font-size: 20px;
+  color: #aaa;
+  max-width: 600px;
+}
+
+/* ───────────────────────────────────────────── */
+/* BUTTON */
+/* ───────────────────────────────────────────── */
+
+.launch-btn {
+  margin-top: 40px;
+  padding: 14px 36px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0a0a0a;
+  background: #5aff2f;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s ease;
+  box-shadow: 0 0 12px #5aff2f55;
+}
+
+.launch-btn:hover {
+  background: #7aff3a;
+  box-shadow: 0 0 18px #5aff2f99;
+  transform: translateY(-2px);
+}
+
+/* ───────────────────────────────────────────── */
+/* FOOTER */
+/* ───────────────────────────────────────────── */
+
+.footer {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  text-align: center;
+  color: #555;
+  font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="hero">
+  <div class="title">KICK MULTISTREAM</div>
+  <div class="subtitle">
+    Kevyt, nopea ja neon‑henkinen monistriimaustyökalu Kick.com‑alustalle.
+    Katso useita striimejä, avaa chatit, järjestele slotteja ja seuraa LIVE‑tilaa reaaliajassa.
+  </div>
+
+  <button class="launch-btn" onclick="location.href='multistream.html'">
+    🚀 Käynnistä sovellus
+  </button>
+</div>
+
+<div class="footer">
+  © 2026 Kick Multistream — Neon UI by ipappa74
+</div>
+
+</body>
+</html>
