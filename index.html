@@ -27,26 +27,66 @@ body {
 }
 
 /* ───────────────────────────────────────────── */
-/* ANIMATED NEON GRID BACKGROUND */
+/* ANIMATED NEON GRID + PARTICLES */
 /* ───────────────────────────────────────────── */
 
-.neon-grid {
+.bg-container {
   position: fixed;
   inset: 0;
+  overflow: hidden;
   z-index: -1;
+}
+
+/* Neon grid */
+.neon-grid {
+  position: absolute;
+  inset: 0;
   background:
-    linear-gradient(90deg, rgba(90,255,47,0.12) 1px, transparent 1px),
-    linear-gradient(rgba(90,255,47,0.12) 1px, transparent 1px);
-  background-size: 60px 60px;
-  animation: gridMove 18s linear infinite;
+    linear-gradient(90deg, rgba(90,255,47,0.15) 1px, transparent 1px),
+    linear-gradient(rgba(90,255,47,0.15) 1px, transparent 1px);
+  background-size: 70px 70px;
+  animation: gridMove 22s linear infinite;
+  opacity: 0.22;
   filter: drop-shadow(0 0 6px #5aff2f55);
-  opacity: 0.25;
 }
 
 @keyframes gridMove {
-  0%   { background-position: 0 0, 0 0; }
-  100% { background-position: 60px 60px, 60px 60px; }
+  0%   { transform: translate(0, 0); }
+  100% { transform: translate(70px, 70px); }
 }
+
+/* Particles layer */
+.particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Single particle */
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #5aff2f;
+  border-radius: 50%;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 6px #5aff2f);
+  animation: particleMove linear infinite;
+}
+
+/* Particle animation */
+@keyframes particleMove {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-120vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
 
 /* ───────────────────────────────────────────── */
 /* HERO SECTION */
@@ -117,7 +157,10 @@ body {
 </head>
 
 <body>
-<div class="neon-grid"></div>
+<div class="bg-container">
+  <div class="neon-grid"></div>
+  <div class="particles" id="particles"></div>
+</div>
 
 <div class="hero">
   <div class="title">KICK MULTISTREAM</div>
@@ -134,6 +177,31 @@ body {
 <div class="footer">
   © 2026 Kick Multistream — Neon UI by ipappa74
 </div>
+
+<script>
+/* Generate neon particles */
+const container = document.getElementById("particles");
+
+for (let i = 0; i < 40; i++) {
+  const p = document.createElement("div");
+  p.className = "particle";
+
+  const size = Math.random() * 3 + 2;
+  p.style.width = size + "px";
+  p.style.height = size + "px";
+
+  p.style.left = Math.random() * 100 + "vw";
+  p.style.top = Math.random() * 100 + "vh";
+
+  const duration = Math.random() * 12 + 8;
+  p.style.animationDuration = duration + "s";
+
+  const delay = Math.random() * -duration;
+  p.style.animationDelay = delay + "s";
+
+  container.appendChild(p);
+}
+</script>
 
 </body>
 </html>
