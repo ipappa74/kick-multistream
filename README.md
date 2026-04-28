@@ -1,9 +1,9 @@
 # Kick Multistream
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/USER/REPO?style=flat&color=5aff2f&label=Stars" />
-  <img src="https://img.shields.io/github/issues/USER/REPO?color=5aff2f&label=Issues" />
-  <img src="https://img.shields.io/github/last-commit/USER/REPO?color=5aff2f&label=Last%20Commit" />
+  <img src="https://img.shields.io/github/stars/ipappa74/kick-multistream?style=flat&color=5aff2f&label=Stars" />
+  <img src="https://img.shields.io/github/issues/ipappa74/kick-multistream?color=5aff2f&label=Issues" />
+  <img src="https://img.shields.io/github/last-commit/ipappa74/kick-multistream?color=5aff2f&label=Last%20Commit" />
   <img src="https://img.shields.io/badge/License-MIT-5aff2f" />
   <img src="https://img.shields.io/badge/Kick%20Theme-Neon-5aff2f" />
 </p>
