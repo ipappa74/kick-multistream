@@ -37,22 +37,23 @@ body {
   z-index: -1;
 }
 
-/* Neon grid */
 .neon-grid {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(90deg, rgba(90,255,47,0.15) 1px, transparent 1px),
-    linear-gradient(rgba(90,255,47,0.15) 1px, transparent 1px);
-  background-size: 70px 70px;
-  animation: gridMove 22s linear infinite;
-  opacity: 0.22;
+  z-index: -2;
+  background-image: url("data:image/svg+xml;utf8,\
+    <svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'>\
+      <rect width='60' height='60' fill='none' stroke='rgba(90,255,47,0.18)' stroke-width='1'/>\
+    </svg>");
+  background-size: 60px 60px;
+  animation: gridScroll 18s linear infinite;
+  opacity: 0.25;
   filter: drop-shadow(0 0 6px #5aff2f55);
 }
 
-@keyframes gridMove {
-  0%   { transform: translate(0, 0); }
-  100% { transform: translate(70px, 70px); }
+@keyframes gridScroll {
+  0%   { background-position: 0 0; }
+  100% { background-position: 60px 60px; }
 }
 
 /* Particles layer */
@@ -86,7 +87,6 @@ body {
     opacity: 0;
   }
 }
-
 
 /* ───────────────────────────────────────────── */
 /* HERO SECTION */
