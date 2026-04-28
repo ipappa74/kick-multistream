@@ -88,6 +88,23 @@ body {
   }
 }
 
+/* CRT scanline effect */
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.12;
+}
+
 /* ───────────────────────────────────────────── */
 /* HERO SECTION */
 /* ───────────────────────────────────────────── */
@@ -160,6 +177,7 @@ body {
 <div class="bg-container">
   <div class="neon-grid"></div>
   <div class="particles" id="particles"></div>
+  <div class="crt-scanlines"></div>
 </div>
 
 <div class="hero">
