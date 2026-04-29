@@ -5,8 +5,8 @@
  Tekijä:      Toni
  Sijainti:    Oulu, Suomi
  Projekti:    Kick Multistream (HTML + CSS + JS)
- Versio:      1.0.0
- Päiväys:     2026-04-28
+ Versio:      1.1.0
+ Päiväys:     2026-04-29
 
  Kuvaus:
    Kevyt, nopea ja neon-henkinen monistriimaustyökalu
@@ -1021,6 +1021,29 @@ iframe.stream-frame {
   cursor: pointer;
 }
 
+/* Estetään iframen "syömästä" hiiren tapahtumia vedon aikana */
+.dragging-active iframe {
+  pointer-events: none !important;
+}
+
+/* Optimoitu kuvasuhde */
+.frame-area {
+  flex: 1;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stream-frame {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  border: none;
+}
+
 /* ───────────────────────────────────────────── */
 /* RESPONSIVE (≤ 1200px) */
 /* ───────────────────────────────────────────── */
@@ -1072,7 +1095,6 @@ iframe.stream-frame {
 }
 
 /* MOBIILI (≤ 768px) */
-/* ───────────────────────────────────────────── */
 
 @media (max-width: 768px) {
   
@@ -1225,14 +1247,12 @@ iframe.stream-frame {
 // Sovelluksen metatiedot
 const APP_META = {
   name: "Kick Multistream",
-  version: "1.0.1",
-  buildDate: "2026-04-29",
+  version: "1.1.0",
+  buildDate: "2026-04-29", // Päivitetty versio ja päiväys[cite: 1]
   author: "Toni",
   repo: "https://github.com/ipappa74/kick-multistream",
   homepage: "https://ipappa74.github.io/kick-multistream/"
 };
-
-console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
 
   // Käyttäjäseuranta
   const analytics = {
@@ -1283,6 +1303,8 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
     }
   };
   
+  console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
+  
   // Seuranta käynnistys
   const visitData = analytics.trackVisit();
   
@@ -1296,75 +1318,117 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
   // Mobiililaitteen tunnistus
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
   
-  const MAX = isMobile ? 3 : 9; // Rajoita mobiilissa 3 striimiin
+  // --- GLOBAALIT MUUTTUJAT ---
+  const MAX = isMobile ? 3 : 9; 
   let count = 1;
   let zoomedSlot = -1;
-
   const channels  = Array(MAX).fill('');
-  let muted     = Array(MAX).fill(true); // Muutettu let jotta voidaan päivittää
+  let muted      = Array(MAX).fill(true);
   const chatOpen  = Array(MAX).fill(false);
   const liveStatus = {};
   const viewers    = {};
-
   let selectedSlot = null;
   let favorites = JSON.parse(localStorage.getItem('kick-favs') || '[]');
   let autoLoadChannels = JSON.parse(localStorage.getItem('kick-auto-load-channels') || '{}');
   let dragSrcIndex = null;
 
-  // Lataa mute-tilat heti alustuksen jälkeen
+  // --- TAPAHTUMIEN DELEGOINTI (UUSI) ---[cite: 1]
+  const grid = document.getElementById('grid');
+
+  grid.addEventListener('dragstart', (e) => {
+    const slot = e.target.closest('.slot');
+    if (!slot) return;
+    dragSrcIndex = Number(slot.dataset.index);
+    slot.classList.add("dragging");
+    document.body.classList.add("dragging-active"); // Estää iframen hiiriongelmat[cite: 1]
+    e.dataTransfer.effectAllowed = "move";
+  });
+
+  grid.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const slot = e.target.closest('.slot');
+    if (slot) slot.classList.add("drag-over");
+  });
+
+  grid.addEventListener('dragleave', (e) => {
+    const slot = e.target.closest('.slot');
+    if (slot) slot.classList.remove("drag-over");
+  });
+
+  grid.addEventListener('drop', (e) => {
+    e.preventDefault();
+    document.body.classList.remove("dragging-active");
+    const slot = e.target.closest('.slot');
+    if (!slot) return;
+    
+    slot.classList.remove("drag-over");
+    const targetIndex = Number(slot.dataset.index);
+    
+    if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) {
+      swapSlots(dragSrcIndex, targetIndex);
+      renderGrid();
+    }
+  });
+
+  grid.addEventListener('dragend', (e) => {
+    const slot = e.target.closest('.slot');
+    if (slot) slot.classList.remove("dragging");
+    document.body.classList.remove("dragging-active");
+  });
+
+  // Lataa tila heti alustuksen jälkeen
   loadState();
 
-	/* ===== DIALOG (UNIFIED) ===== */
+  /* ===== DIALOG (UNIFIED) ===== */
 
-	function openDialog(slot, mode){
-	  selectedSlot = slot;
-	  dialogMode = mode;
-	  const title = document.getElementById('dialogTitle') || document.querySelector('.add-dialog-content h2');
-	  const loadBtn = document.getElementById('dialogLoadBtn');
-	  const input = document.getElementById('dialogChannelInput');
-	  
-	  if (mode === 'favorite') {
-		if (title) title.textContent = 'Lisää suosikki';
-		if (loadBtn) loadBtn.textContent = 'Lisää';
-		if (input) input.placeholder = 'Kanavan nimi suosikiksi';
-	  } else {
-		if (title) title.textContent = 'Lisää striimi';
-		if (loadBtn) loadBtn.textContent = 'Lataa';
-		if (input) input.placeholder = 'Kanavan nimi';
-	  }
-	  
-	  document.getElementById('addStreamDialog').classList.remove('hidden');
-	}
+  function openDialog(slot, mode){
+    selectedSlot = slot;
+    dialogMode = mode;
+    const title = document.getElementById('dialogTitle') || document.querySelector('.add-dialog-content h2');
+    const loadBtn = document.getElementById('dialogLoadBtn');
+    const input = document.getElementById('dialogChannelInput');
+    
+    if (mode === 'favorite') {
+    if (title) title.textContent = 'Lisää suosikki';
+    if (loadBtn) loadBtn.textContent = 'Lisää';
+    if (input) input.placeholder = 'Kanavan nimi suosikiksi';
+    } else {
+    if (title) title.textContent = 'Lisää striimi';
+    if (loadBtn) loadBtn.textContent = 'Lataa';
+    if (input) input.placeholder = 'Kanavan nimi';
+    }
+    
+    document.getElementById('addStreamDialog').classList.remove('hidden');
+  }
 
-	function closeDialog(){
-	  document.getElementById('addStreamDialog').classList.add('hidden');
-	  document.getElementById('dialogChannelInput').value = '';
-	}
+  function closeDialog(){
+    document.getElementById('addStreamDialog').classList.add('hidden');
+    document.getElementById('dialogChannelInput').value = '';
+  }
 
-	document.getElementById('dialogLoadBtn').onclick = () => {
-	  const val = document.getElementById('dialogChannelInput').value.trim();
-	  if(!val) return;
+  document.getElementById('dialogLoadBtn').onclick = () => {
+    const val = document.getElementById('dialogChannelInput').value.trim();
+    if(!val) return;
 
-	  if(dialogMode === 'stream'){
-		channels[selectedSlot] = val;
-		// Älä muuta mute-tilaa striimiä avattaessa - pidä olemassa oleva tai oletus muted
-		if (muted[selectedSlot] === undefined) muted[selectedSlot] = true;
-	  } else if (dialogMode === 'favorite') {
-		const ch = val.toLowerCase().replace(/^@/, '');
-		if (ch && !favorites.includes(ch)) {
-		  favorites.push(ch);
-		  localStorage.setItem('kick-favs', JSON.stringify(favorites));
-		  checkLiveFavOnly(ch);
-		  renderFavorites();
-		}
-	  }
+    if(dialogMode === 'stream'){
+    channels[selectedSlot] = val;
+    if (muted[selectedSlot] === undefined) muted[selectedSlot] = true;
+    } else if (dialogMode === 'favorite') {
+    const ch = val.toLowerCase().replace(/^@/, '');
+    if (ch && !favorites.includes(ch)) {
+      favorites.push(ch);
+      localStorage.setItem('kick-favs', JSON.stringify(favorites));
+      checkLiveFavOnly(ch);
+      renderFavorites();
+    }
+    }
 
-	  saveState();
-	  render();
-	  closeDialog();
-	};
+    saveState();
+    render();
+    closeDialog();
+  };
 
-	document.getElementById('dialogCloseBtn').onclick = closeDialog;
+  document.getElementById('dialogCloseBtn').onclick = closeDialog;
 
   function saveState() {
     const state = {
@@ -1374,69 +1438,35 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
       chatOpen: chatOpen.slice(0, MAX)
     };
     localStorage.setItem('kick-state', JSON.stringify(state));
-    console.log('State saved - mute states:', state.muted.slice(0, 3));
   }
 
-	// ======================================================
-	// ABOUT DIALOG
-	// ======================================================
+  function openAbout() {
+    const overlay = document.getElementById("aboutOverlay");
+    const ver = document.getElementById("aboutVersion");
+    if (ver && APP_META) {
+    ver.textContent = `Versio: ${APP_META.version} (${APP_META.buildDate})`;
+    }
+    overlay.classList.remove("hidden");
+  }
 
-	function openAbout() {
-	  const overlay = document.getElementById("aboutOverlay");
-	  const ver = document.getElementById("aboutVersion");
-	  if (ver && APP_META) {
-		ver.textContent = `Versio: ${APP_META.version} (${APP_META.buildDate})`;
-	  }
-	  overlay.classList.remove("hidden");
-	}
-
-	function closeAbout() {
-	  document.getElementById("aboutOverlay").classList.add("hidden");
-	}
+  function closeAbout() {
+    document.getElementById("aboutOverlay").classList.add("hidden");
+  }
 
   function loadState() {
     try {
       const s = JSON.parse(localStorage.getItem('kick-state') || 'null');
-      
-      // Aseta oletusarvot ensin - kaikki slotit muted-tilassa
       for (let i = 0; i < MAX; i++) {
-        muted[i] = true; // Oletus: aina muted päällä
+        muted[i] = true;
         channels[i] = '';
         chatOpen[i] = false;
       }
-      
-      if (!s) {
-        // Ei aiempaa tilaa - käytä oletuksia
-        return;
-      }
-      
+      if (!s) return;
       count = s.count || 1;
-      
-      // Lataa kanavat
-      if (s.channels) {
-        s.channels.forEach((ch, i) => { 
-          if (ch !== undefined) channels[i] = ch; 
-        });
-      }
-      
-      // Lataa mute-asetukset - säilytä käyttäjän asetukset
-      if (s.muted) {
-        s.muted.forEach((m, i) => { 
-          if (m !== undefined) muted[i] = m; 
-        });
-      }
-      
-      // Lataa chat-asetukset
-      if (s.chatOpen) {
-        s.chatOpen.forEach((open, i) => { 
-          if (open !== undefined) chatOpen[i] = open; 
-        });
-      }
-      
-      console.log('State loaded - mute states:', muted.slice(0, 3));
-      
+      if (s.channels) s.channels.forEach((ch, i) => { if (ch !== undefined) channels[i] = ch; });
+      if (s.muted) s.muted.forEach((m, i) => { if (m !== undefined) muted[i] = m; });
+      if (s.chatOpen) s.chatOpen.forEach((open, i) => { if (open !== undefined) chatOpen[i] = open; });
     } catch(e) {
-      // Virhetilanteessa palauta oletusarvot
       for (let i = 0; i < MAX; i++) {
         muted[i] = true;
         channels[i] = '';
@@ -1445,21 +1475,20 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
     }
   }
 
-	const layoutMap = { 1:1, 2:2, 3:3, 4:4, 6:6, 9:9 };
+  const layoutMap = { 1:1, 2:2, 3:3, 4:4, 6:6, 9:9 };
 
-	function setLayout(n) {
-	  count = layoutMap[n] || n;
-	  saveState();
-	  document.querySelectorAll('.lbtn').forEach((b, i) => {
-		b.classList.toggle('active', [1,2,3,4,6,9][i] === n);
-	  });
-	  saveState(); // Tallenna uudelleen ennen renderGrid()
-	  renderGrid();
-	}
+  function setLayout(n) {
+    count = layoutMap[n] || n;
+    saveState();
+    document.querySelectorAll('.lbtn').forEach((b, i) => {
+    b.classList.toggle('active', [1,2,3,4,6,9][i] === n);
+    });
+    renderGrid();
+  }
 
   function buildSlot(i) {
     const ch = channels[i] || '';
-    const isMuted = muted[i] !== false; // Oletus muted jos ei asetettu
+    const isMuted = muted[i] !== false; 
     const isChat  = chatOpen[i];
     const isLive  = ch ? liveStatus[ch] : null;
     const vc      = ch && viewers[ch] != null ? viewers[ch].toLocaleString('fi-FI') : null;
@@ -1473,7 +1502,6 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
           ${vc != null ? vc + ' katsojaa' : ''}
         </div>
       </div>
-
       <div class="overlay-right">
         <button class="overlay-btn close-btn" onclick="closeSlot(${i})" title="Sulje striimi">✕</button>
         <button class="overlay-btn zoom-btn" onclick="toggleZoom(${i})" title="${zoomedSlot === i ? 'Sulje suurennos' : 'Suurenna striimi'}">
@@ -1482,17 +1510,17 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
       </div>
     ` : '';
 
-const frameContent = ch
-  ? `<iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" allowfullscreen allow="autoplay; encrypted-media; fullscreen" loading="lazy"></iframe>
-     ${overlays}`
-  : `
-    <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
-      <div class="placeholder-content">
-        <div class="placeholder-circle">+</div>
-        <div class="placeholder-label">Lisää striimi</div>
-      </div>
-    </div>
-  `;
+    const frameContent = ch
+      ? `<iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" allowfullscreen allow="autoplay; encrypted-media; fullscreen" loading="lazy"></iframe>
+         ${overlays}`
+      : `
+        <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
+          <div class="placeholder-content">
+            <div class="placeholder-circle">+</div>
+            <div class="placeholder-label">Lisää striimi</div>
+          </div>
+        </div>
+      `;
 
     const chatContent = ch
       ? `<div class="chat-panel ${isChat ? 'open' : ''}" id="chat-${i}">
@@ -1504,86 +1532,47 @@ const frameContent = ch
         <div class="frame-area" id="fa-${i}">${frameContent}</div>
         ${chatContent}
       </div>
-
-	<div class="bar">
-	  ${ch ? `<span class="ch-label" onclick="openTab(${i})">
-				${ch}
-				<span class="link-icon">↗</span>
-			  </span>
-			` : ''}
-
-	  <!-- Chat + Mute siirtyvät oikealle -->
-	  ${ch ? `
-		<button class="chat-btn ${isChat ? 'active' : ''}" id="chatbtn-${i}" onclick="toggleChat(${i})">Chat</button>
-		<button class="mute-btn ${isMuted ? 'active' : ''}" onclick="toggleMute(${i})">
-		  ${isMuted ? 'Unmute' : 'Mute'}
-		</button>
-	  ` : ''}
-	</div>
+      <div class="bar">
+        ${ch ? `<span class="ch-label" onclick="openTab(${i})">${ch}<span class="link-icon">↗</span></span>` : ''}
+        ${ch ? `
+        <button class="chat-btn ${isChat ? 'active' : ''}" id="chatbtn-${i}" onclick="toggleChat(${i})">Chat</button>
+        <button class="mute-btn ${isMuted ? 'active' : ''}" onclick="toggleMute(${i})">
+          ${isMuted ? 'Unmute' : 'Mute'}
+        </button>
+        ` : ''}
+      </div>
     `;
   }
 
-	function applyDesktopGrid(count) {
-	  const grid = document.getElementById('grid');
-
-	  // Mobiili → ei muuteta mitään
-	  if (window.innerWidth <= 1200) {
-		grid.style.gridTemplateColumns = '';
-		return;
+	function renderGrid() {
+	  grid.className = `stream-grid streams-${count}`;
+	  
+	  // Poistetaan ylimääräiset slotit vain lopusta, jos count on pienentynyt
+	  while (grid.children.length > count) {
+		grid.removeChild(grid.lastChild);
 	  }
 
-	  // Desktop → aina max 3 saraketta
-	  const cols = Math.min(3, count); // 1–3 → 1–3, yli 3 → 3
-	  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-	}
-
-	function renderGrid() {
-	  const grid = document.getElementById('grid');
-	  
-	  // Päivitetään gridin asettelu-luokka
-	  grid.className = `stream-grid streams-${count}`;
-
-	  // 1. Poistetaan ylimääräiset slotit (jos count pieneni)
-	  const currentSlots = grid.querySelectorAll('.slot');
-	  currentSlots.forEach(slot => {
-		const idx = parseInt(slot.dataset.index);
-		if (idx >= count) {
-		  slot.remove();
-		}
-	  });
-
-	  // 2. Lisätään tai päivitetään slotit
 	  for (let i = 0; i < count; i++) {
 		let slot = document.getElementById('slot-' + i);
 		const channelAtSlot = channels[i] || '';
-
+		
 		if (!slot) {
-		  // Luodaan uusi slotti vain jos sitä ei ole olemassa
+		  // Luo uusi slot vain jos sitä ei ole olemassa
 		  slot = document.createElement('div');
 		  slot.className = 'slot';
 		  slot.id = 'slot-' + i;
 		  slot.setAttribute("draggable", "true");
 		  slot.dataset.index = i;
-		  slot.dataset.channel = channelAtSlot; // Tallennetaan nykyinen kanava muistiin
-
-		  // Lisätään event listenerit kerran
-		  slot.addEventListener("dragstart", onDragStart);
-		  slot.addEventListener("dragover", onDragOver);
-		  slot.addEventListener("dragleave", onDragLeave);
-		  slot.addEventListener("drop", onDrop);
-		  slot.addEventListener("dragend", onDragEnd);
-
+		  slot.dataset.channel = channelAtSlot;
 		  slot.innerHTML = buildSlot(i);
 		  grid.appendChild(slot);
 		} else {
-		  // Slotti on jo olemassa, tarkistetaan pitääkö sisältö päivittää
-		  // Päivitetään vain jos kanava on muuttunut, jotta iframe ei lataudu turhaan
+		  // PÄIVITYS: Jos kanava on vaihtunut, päivitä sisältö
 		  if (slot.dataset.channel !== channelAtSlot) {
 			slot.innerHTML = buildSlot(i);
 			slot.dataset.channel = channelAtSlot;
 		  }
-		  
-		  // Päivitetään zoom-luokka ilman että kosketaan sisäiseen HTML:ään
+		  // Päivitä vain zoom-luokka, älä lataa iframea uudelleen
 		  slot.classList.toggle('zoomed', zoomedSlot === i);
 		}
 	  }
@@ -1594,106 +1583,71 @@ const frameContent = ch
     const channel = (ch !== undefined ? ch : inp.value).trim().toLowerCase().replace(/^@/, '');
     if (inp) inp.value = channel;
     channels[i] = channel;
-    // Älä muuta mute-tilaa ladattaessa - säilytä olemassa oleva tila (oletus muted)
     if (muted[i] === undefined) muted[i] = true;
     chatOpen[i] = false;
     saveState();
     const slot = document.getElementById('slot-' + i);
-    if (slot) slot.innerHTML = buildSlot(i);
+    if (slot) {
+      slot.innerHTML = buildSlot(i);
+      slot.dataset.channel = channel;
+    }
     if (channel) checkLive(channel, i);
   }
 
-  function toggleMute(i) {
-    // Toggle muted state - oletus on true (muted) jos undefined
-    muted[i] = muted[i] === false ? true : false;
-    saveState();
+	function toggleMute(i) {
+	  // Vaihdetaan tila (true/false) ja tallennetaan se paikallisesti
+	  muted[i] = !muted[i]; 
+	  saveState();
 
-    const ch = channels[i];
-    if (!ch) return;
+	  const ch = channels[i];
+	  if (!ch) return;
 
-    const iframe = document.querySelector(`#slot-${i} .stream-frame`);
-    if (iframe) {
-      iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=${muted[i]}`;
-    }
+	  const iframe = document.querySelector(`#slot-${i} .stream-frame`);
+	  if (iframe) {
+		// Päivitetään iframe uudella muted-parametrilla
+		iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=${muted[i]}`;
+	  }
 
-    const muteBtn = document.querySelector(`#slot-${i} .mute-btn`);
-    if (muteBtn) {
-      muteBtn.classList.toggle('active', muted[i] !== false);
-      muteBtn.textContent = muted[i] !== false ? 'Unmute' : 'Mute';
-    }
-    
-    // Kiertoratkaisu Kick API:n mute-nollaukselle - palauta muut slotit oikeaan tilaan
-    setTimeout(() => {
-      for (let j = 0; j < MAX; j++) {
-        if (j !== i && channels[j]) {
-          const otherMuteBtn = document.querySelector(`#slot-${j} .mute-btn`);
-          if (otherMuteBtn) {
-            // Varmista että slot on olemassa ennen napin päivittämistä
-            const slot = document.getElementById(`slot-${j}`);
-            if (slot && slot.querySelector('.stream-frame')) {
-              otherMuteBtn.classList.toggle('active', muted[j] !== false);
-              otherMuteBtn.textContent = muted[j] !== false ? 'Unmute' : 'Mute';
-              
-              // Jos striimi on unmuted ja jäänyt, lataa se uudelleen
-              if (muted[j] === false) {
-                const iframe = slot.querySelector('.stream-frame');
-                if (iframe) {
-                  const ch = channels[j];
-                  iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=false`;
-                }
-              }
-            }
-          }
-        }
-      }
-    }, 100);
-  }
+	  const muteBtn = document.querySelector(`#slot-${i} .mute-btn`);
+	  if (muteBtn) {
+		// Päivitetään painikkeen tyyli ja teksti vastaamaan uutta tilaa
+		muteBtn.classList.toggle('active', muted[i]);
+		muteBtn.textContent = muted[i] ? 'Unmute' : 'Mute';
+	  }
+	}
 
   function closeSlot(i) {
     channels[i] = '';
     chatOpen[i] = false;
-    // Älä resetoi mute-tilaa sulkemisessa - säilytä käyttäjän asetus
     saveState();
     const slot = document.getElementById('slot-' + i);
-    if (slot) slot.innerHTML = buildSlot(i);
+    if (slot) {
+      slot.innerHTML = buildSlot(i);
+      slot.dataset.channel = '';
+    }
   }
 
-	function toggleZoom(i) {
-	  const oldZoomed = zoomedSlot;
-	  zoomedSlot = (zoomedSlot === i) ? -1 : i;
-	  
-	  // Päivitetään vain luokat, ei HTML-sisältöä
-	  document.querySelectorAll('.slot').forEach((slot, idx) => {
-		slot.classList.toggle('zoomed', idx === zoomedSlot);
-		
-		// Päivitetään zoom-napin ulkoasu vain kyseisissä sloteissa
-		if (idx === i || idx === oldZoomed) {
-		  const zoomBtn = slot.querySelector('.zoom-btn');
-		  if (zoomBtn) {
-			zoomBtn.textContent = (zoomedSlot === idx) ? '−' : '+';
-			zoomBtn.title = (zoomedSlot === idx) ? 'Sulje suurennos' : 'Suurenna striimi';
-		  }
-		}
-	  });
-	}
+  function toggleZoom(i) {
+    zoomedSlot = (zoomedSlot === i) ? -1 : i;
+    document.querySelectorAll('.slot').forEach((slot, idx) => {
+      slot.classList.toggle('zoomed', idx === zoomedSlot);
+      const btn = slot.querySelector('.zoom-btn');
+      if (btn && idx === i) btn.textContent = (zoomedSlot === idx) ? '−' : '+';
+    });
+  }
 
   function toggleChat(i) {
     chatOpen[i] = !chatOpen[i];
-    saveState(); // Tallenna chatOpen tila
-
+    saveState();
     const panel = document.getElementById('chat-' + i);
     const btn   = document.getElementById('chatbtn-' + i);
     if (!panel) return;
-
     panel.classList.toggle('open', chatOpen[i]);
     if (btn) btn.classList.toggle('active', chatOpen[i]);
-
     if (chatOpen[i]) {
       const iframe = document.getElementById('chat-iframe-' + i);
       const ch = channels[i];
-      if (iframe && iframe.src === 'about:blank' && ch) {
-        iframe.src = `https://kick.com/${ch}/chatroom`;
-      }
+      if (iframe && iframe.src === 'about:blank' && ch) iframe.src = `https://kick.com/${ch}/chatroom`;
     }
   }
 
@@ -1705,20 +1659,12 @@ const frameContent = ch
   async function checkLive(ch, slotIndex) {
     if (!ch) return;
     try {
-      const res = await fetch(`https://kick.com/api/v1/channels/${ch}`, {
-        headers: { 'Accept': 'application/json' }
-      });
+      const res = await fetch(`https://kick.com/api/v1/channels/${ch}`, { headers: { 'Accept': 'application/json' } });
       if (!res.ok) return;
-
       const data = await res.json();
       const isLive = !!(data.livestream && data.livestream.is_live);
       liveStatus[ch] = isLive;
-
-      if (isLive && data.livestream.viewer_count != null) {
-        viewers[ch] = data.livestream.viewer_count;
-      } else {
-        viewers[ch] = null;
-      }
+      viewers[ch] = isLive ? data.livestream.viewer_count : null;
 
       if (slotIndex !== undefined) {
         const badge = document.getElementById('livebadge-' + slotIndex);
@@ -1726,23 +1672,12 @@ const frameContent = ch
           badge.className = 'live-badge ' + (isLive ? 'live' : 'offline');
           badge.textContent = isLive ? 'LIVE' : 'OFFLINE';
         }
-
         const vEl = document.getElementById('viewers-' + slotIndex);
         if (vEl) {
-          if (isLive && viewers[ch] != null) {
-            vEl.className = 'viewers-badge visible';
-            vEl.textContent = viewers[ch].toLocaleString('fi-FI') + ' katsojaa';
-          } else {
-            vEl.className = 'viewers-badge';
-            vEl.textContent = '';
-          }
+          vEl.className = isLive ? 'viewers-badge visible' : 'viewers-badge';
+          vEl.textContent = isLive ? viewers[ch].toLocaleString('fi-FI') + ' katsojaa' : '';
         }
       }
-
-      if (!isLive && slotIndex !== undefined) {
-        closeSlot(slotIndex);
-      }
-
       updateFavoriteChips();
     } catch(e) {}
   }
@@ -1750,15 +1685,11 @@ const frameContent = ch
   async function checkLiveFavOnly(ch) {
     if (!ch) return;
     try {
-      const res = await fetch(`https://kick.com/api/v1/channels/${ch}`, {
-        headers: { 'Accept': 'application/json' }
-      });
+      const res = await fetch(`https://kick.com/api/v1/channels/${ch}`, { headers: { 'Accept': 'application/json' } });
       if (!res.ok) return;
-
       const data = await res.json();
       const wasLive = liveStatus[ch] === true;
       const isLive = !!(data.livestream && data.livestream.is_live);
-
       liveStatus[ch] = isLive;
 
       if (autoLoadChannels[ch] === true && isLive && !wasLive) {
@@ -1769,117 +1700,53 @@ const frameContent = ch
           load(target, ch);
         }
       }
-
       updateFavoriteChips();
     } catch(e) {}
   }
 
-  function checkAllLive() {
+  async function checkAllLive() {
     for (let i = 0; i < count; i++) {
-      if (channels[i]) checkLive(channels[i], i);
+      if (channels[i]) {
+        await checkLive(channels[i], i);
+        await new Promise(r => setTimeout(r, 500)); // Rate-limiting[cite: 1]
+      }
     }
-    favorites.forEach(fav => {
-      if (!channels.slice(0, count).includes(fav)) checkLiveFavOnly(fav);
-    });
+    for (const fav of favorites) {
+      if (!channels.slice(0, count).includes(fav)) {
+        await checkLiveFavOnly(fav);
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
   }
 
   function renderFavorites() {
     const chips = document.getElementById('fav-chips');
+    if (!chips) return;
     chips.innerHTML = '';
-
-    const sorted = [...favorites].sort((a, b) => {
-      const aLive = liveStatus[a] === true ? 1 : 0;
-      const bLive = liveStatus[b] === true ? 1 : 0;
-      return bLive - aLive;
-    });
-
+    const sorted = [...favorites].sort((a, b) => (liveStatus[b] === true ? 1 : 0) - (liveStatus[a] === true ? 1 : 0));
     sorted.forEach((fav) => {
       const isLive = liveStatus[fav];
       const auto = autoLoadChannels[fav] === true;
-
       const chip = document.createElement('span');
       chip.className = 'fav-chip' + (isLive ? ' live' : '');
-      chip.title = 'Klikkaa ladataksesi. Oikea klikkaus poistaa.';
-
-      chip.innerHTML = `
-        <input type="checkbox" class="fav-auto" data-ch="${fav}" ${auto ? 'checked' : ''}>
-        <span>${fav}</span>
-      `;
-
-      chip.onclick = (e) => {
-        if (e.target.classList.contains('fav-auto')) return;
-        loadFavoriteToSlot(fav);
-      };
-
-      chip.oncontextmenu = (e) => {
-        e.preventDefault();
-        removeFavorite(favorites.indexOf(fav));
-      };
-
+      chip.innerHTML = `<input type="checkbox" class="fav-auto" data-ch="${fav}" ${auto ? 'checked' : ''}><span>${fav}</span>`;
+      chip.onclick = (e) => { if (!e.target.classList.contains('fav-auto')) loadFavoriteToSlot(fav); };
+      chip.oncontextmenu = (e) => { e.preventDefault(); removeFavorite(favorites.indexOf(fav)); };
       chips.appendChild(chip);
     });
-
     document.querySelectorAll('.fav-auto').forEach(cb => {
       cb.addEventListener('change', (e) => {
-        const ch = e.target.dataset.ch;
-        autoLoadChannels[ch] = e.target.checked;
+        autoLoadChannels[e.target.dataset.ch] = e.target.checked;
         localStorage.setItem('kick-auto-load-channels', JSON.stringify(autoLoadChannels));
       });
     });
   }
 
   function updateFavoriteChips() { renderFavorites(); }
-
-  function addFavorite() {
-    openDialog(null, 'favorite');
-  }
-
-  function addStreamAt(i) {
-    openDialog(i, 'stream');
-  }
-
-  function removeFavorite(fi) {
-    favorites.splice(fi, 1);
-    localStorage.setItem('kick-favs', JSON.stringify(favorites));
-    renderFavorites();
-  }
-
-  function loadFavoriteToSlot(ch) {
-    let target = channels.slice(0, count).indexOf('');
-    if (target === -1) target = 0;
-    load(target, ch);
-  }
-
-  function onDragStart(e) {
-    dragSrcIndex = Number(this.dataset.index);
-    this.classList.add("dragging");
-    e.dataTransfer.effectAllowed = "move";
-  }
-
-  function onDragOver(e) {
-    e.preventDefault();
-    this.classList.add("drag-over");
-    e.dataTransfer.dropEffect = "move";
-  }
-
-  function onDragLeave() {
-    this.classList.remove("drag-over");
-  }
-
-  function onDrop(e) {
-    e.preventDefault();
-    this.classList.remove("drag-over");
-
-    const targetIndex = Number(this.dataset.index);
-    if (dragSrcIndex === targetIndex) return;
-
-    swapSlots(dragSrcIndex, targetIndex);
-    renderGrid();
-  }
-
-  function onDragEnd() {
-    this.classList.remove("dragging");
-  }
+  function addFavorite() { openDialog(null, 'favorite'); }
+  function addStreamAt(i) { openDialog(i, 'stream'); }
+  function removeFavorite(fi) { favorites.splice(fi, 1); localStorage.setItem('kick-favs', JSON.stringify(favorites)); renderFavorites(); }
+  function loadFavoriteToSlot(ch) { let target = channels.slice(0, count).indexOf(''); if (target === -1) target = 0; load(target, ch); }
 
   function swapSlots(a, b) {
     [channels[a], channels[b]] = [channels[b], channels[a]];
@@ -1888,164 +1755,27 @@ const frameContent = ch
     saveState();
   }
 
-  function render() {
-    renderGrid();
-  }
+  function render() { renderGrid(); }
 
+  // Alustus
   renderFavorites();
-
-  document.querySelectorAll('.lbtn').forEach((b, i) => {
-    b.classList.toggle('active', [1,2,3,4,6,9][i] === count);
-  });
-
   renderGrid();
-  favorites.forEach(fav => checkLiveFavOnly(fav));
+  loadState();
+  checkAllLive(); 
 
-  // Fullscreen-tapahtumien käsittely
-  document.addEventListener('fullscreenchange', () => {
-    saveState(); // Tallenna mute-tilat fullscreen-tilan muuttuessa
-  });
-
-  document.addEventListener('webkitfullscreenchange', () => {
-    saveState(); // Safari-tuki
-  });
-
-  document.addEventListener('mozfullscreenchange', () => {
-    saveState(); // Firefox-tuki
-  });
-
-  document.addEventListener('MSFullscreenChange', () => {
-    saveState(); // IE/Edge-tuki
-  });
-
-  // Window resize -tapahtuman käsittely
-  let resizeTimeout;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-      saveState(); // Tallenna mute-tilat resize-tapahtuman jälkeen
-      
-      // Kiertoratkaisu Kick API:n mute-nollaukselle - useita tarkistuksia
-      const fixMuteStates = () => {
-        for (let j = 0; j < MAX; j++) {
-          if (channels[j]) {
-            const muteBtn = document.querySelector(`#slot-${j} .mute-btn`);
-            if (muteBtn) {
-              const slot = document.getElementById(`slot-${j}`);
-              if (slot && slot.querySelector('.stream-frame')) {
-                const shouldBeMuted = muted[j] !== false;
-                const isCurrentlyMuted = muteBtn.classList.contains('active');
-                
-                // Päivitä vain jos tila on väärä
-                if (shouldBeMuted !== isCurrentlyMuted) {
-                  muteBtn.classList.toggle('active', shouldBeMuted);
-                  muteBtn.textContent = shouldBeMuted ? 'Unmute' : 'Mute';
-                  
-                  // Jos striimi on unmuted, lataa se uudelleen (mutta ei liian usein)
-                  if (!shouldBeMuted) {
-                    const iframe = slot.querySelector('.stream-frame');
-                    if (iframe && !iframe.dataset.reloading) {
-                      const ch = channels[j];
-                      // Estä liian useat uudelleenlataukset
-                      iframe.dataset.reloading = 'true';
-                      iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=false`;
-                      setTimeout(() => {
-                        delete iframe.dataset.reloading;
-                      }, 1000);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      };
-      
-      // Useita tarkistuksia eri viiveillä - erityinen käsittely ensimmäiselle striimille
-      const fixFirstSlot = () => {
-        if (channels[0]) {
-          const muteBtn = document.querySelector(`#slot-0 .mute-btn`);
-          if (muteBtn) {
-            const slot = document.getElementById('slot-0');
-            if (slot && slot.querySelector('.stream-frame')) {
-              const shouldBeMuted = muted[0] !== false;
-              muteBtn.classList.toggle('active', shouldBeMuted);
-              muteBtn.textContent = shouldBeMuted ? 'Unmute' : 'Mute';
-              
-              // Jos striimi on unmuted, lataa se uudelleen (mutta ei liian usein)
-              if (!shouldBeMuted) {
-                const iframe = slot.querySelector('.stream-frame');
-                if (iframe && !iframe.dataset.reloading) {
-                  const ch = channels[0];
-                  // Estä liian useat uudelleenlataukset
-                  iframe.dataset.reloading = 'true';
-                  iframe.src = `https://player.kick.com/${ch}?autoplay=true&muted=false`;
-                  setTimeout(() => {
-                    delete iframe.dataset.reloading;
-                  }, 1000);
-                }
-              }
-            }
-          }
-        }
-      };
-      
-      fixMuteStates();
-      fixFirstSlot(); // Välitön korjaus ensimmäiselle
-      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 25);
-      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 75);
-      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 150);
-      setTimeout(() => { fixMuteStates(); fixFirstSlot(); }, 300);
-    }, 50); // Lyhyempi ensimmäinen viive
-  });
-
-  for (let i = 0; i < count; i++) {
-    if (channels[i]) checkLive(channels[i], i);
-  }
-
-  setInterval(checkAllLive, 60000);
-
-  setInterval(() => {
-    channels.forEach((ch, i) => {
-      if (ch) checkLive(ch, i);
-    });
-  }, 20000);
+  // Pidennetty tarkistusväli (90s) resurssien säästämiseksi[cite: 1]
+  setInterval(checkAllLive, 90000);
 
   // Mobiili-äänitoiston tuki
   if (isMobile) {
-    // Lisää käyttäjän interaktiokuuntelija äänitoistolle
-    document.addEventListener('click', function enableAudio() {
-      // Yritä enable audio kaikille iframelle
+    const enableAudio = () => {
       document.querySelectorAll('.stream-frame').forEach(iframe => {
-        try {
-          if (iframe.contentWindow) {
-            iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
-          }
-        } catch (e) {
-          // Cross-origin virheet ovat normaaleja
-        }
+        try { if (iframe.contentWindow) iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*'); } catch (e) {}
       });
-      
-      // Poista kuuntelija ensimmäisen klikkauksen jälkeen
-      document.removeEventListener('click', enableAudio);
-    }, { once: true });
-    
-    // Lisää touch-kuuntelija mobiilille
-    document.addEventListener('touchstart', function enableAudioTouch() {
-      document.querySelectorAll('.stream-frame').forEach(iframe => {
-        try {
-          if (iframe.contentWindow) {
-            iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
-          }
-        } catch (e) {
-          // Cross-origin virheet ovat normaaleja
-        }
-      });
-      
-      document.removeEventListener('touchstart', enableAudioTouch);
-    }, { once: true });
+    };
+    document.addEventListener('click', enableAudio, { once: true });
+    document.addEventListener('touchstart', enableAudio, { once: true });
   }
-
 </script>
 </body>
 </html>
