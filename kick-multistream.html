@@ -1131,18 +1131,36 @@ iframe.stream-frame {
     touch-action: manipulation;
   }
   
-  /* Estä zoomaus mobiilissa */
+  /* Estä liiallinen zoomaus mutta salli normaali käyttö */
   body {
-    touch-action: manipulation;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
+    touch-action: pan-y pinch-zoom;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
   
   /* Iframe mobiiliystävälliseksi */
   .stream-frame {
     pointer-events: auto;
     touch-action: manipulation;
+  }
+  
+  /* Varmista äänitoisto mobiilissa */
+  .slot {
+    position: relative;
+  }
+  
+  .slot:active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(90, 255, 47, 0.1);
+    pointer-events: none;
+    animation: fadeOut 0.3s ease-out;
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
   }
 }
 </style>
@@ -1373,7 +1391,7 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
     ` : '';
 
 const frameContent = ch
-  ? `<iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" allowfullscreen allow="autoplay"></iframe>
+  ? `<iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" allowfullscreen allow="autoplay; encrypted-media; fullscreen" loading="lazy"></iframe>
      ${overlays}`
   : `
     <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
@@ -1871,6 +1889,41 @@ const frameContent = ch
       if (ch) checkLive(ch, i);
     });
   }, 20000);
+
+  // Mobiili-äänitoiston tuki
+  if (isMobile) {
+    // Lisää käyttäjän interaktiokuuntelija äänitoistolle
+    document.addEventListener('click', function enableAudio() {
+      // Yritä enable audio kaikille iframelle
+      document.querySelectorAll('.stream-frame').forEach(iframe => {
+        try {
+          if (iframe.contentWindow) {
+            iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
+          }
+        } catch (e) {
+          // Cross-origin virheet ovat normaaleja
+        }
+      });
+      
+      // Poista kuuntelija ensimmäisen klikkauksen jälkeen
+      document.removeEventListener('click', enableAudio);
+    }, { once: true });
+    
+    // Lisää touch-kuuntelija mobiilille
+    document.addEventListener('touchstart', function enableAudioTouch() {
+      document.querySelectorAll('.stream-frame').forEach(iframe => {
+        try {
+          if (iframe.contentWindow) {
+            iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
+          }
+        } catch (e) {
+          // Cross-origin virheet ovat normaaleja
+        }
+      });
+      
+      document.removeEventListener('touchstart', enableAudioTouch);
+    }, { once: true });
+  }
 
 </script>
 </body>
