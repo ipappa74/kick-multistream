@@ -1381,17 +1381,23 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
       </div>
     ` : '';
 
-const frameContent = ch
-  ? `<iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" allowfullscreen allow="autoplay; encrypted-media; fullscreen" loading="lazy"></iframe>
-     ${overlays}`
-  : `
-    <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
-      <div class="placeholder-content">
-        <div class="placeholder-circle">+</div>
-        <div class="placeholder-label">Lisää striimi</div>
-      </div>
-    </div>
-  `;
+    const frameContent = ch
+      ? `<div class="slot" data-index="${i}">
+          <iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" 
+                  allow="autoplay; encrypted-media; fullscreen; microphone" 
+                  referrerpolicy="no-referrer-when-downgrade"
+                  ${isMobile ? 'muted="false"' : ''}>
+          </iframe>
+        ${overlays}
+      </div>`
+      : `
+        <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
+          <div class="placeholder-content">
+            <div class="placeholder-circle">+</div>
+            <div class="placeholder-label">Lisää striimi</div>
+          </div>
+        </div>
+      `;
 
     const chatContent = ch
       ? `<div class="chat-panel ${isChat ? 'open' : ''}" id="chat-${i}">
@@ -1886,18 +1892,25 @@ const frameContent = ch
     function enableAudio() {
       document.querySelectorAll('.stream-frame').forEach(iframe => {
         try {
+          // Aseta iframe-ominaisuudet äänitoistoa varten
+          iframe.muted = false;
+          iframe.volume = 1.0;
+          iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen');
+          
           // Yritä useita tapoja
           if (iframe.contentWindow) {
             iframe.contentWindow.postMessage({ action: 'play' }, '*');
             iframe.contentWindow.postMessage({ action: 'unmute' }, '*');
+            iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
+            iframe.contentWindow.postMessage({ action: 'setVolume', volume: 1.0 }, '*');
           }
           
           // Yritä myös suoraan
-          if (iframe.muted !== undefined) {
-            iframe.muted = false;
+          if (iframe.play) {
+            iframe.play().catch(e => console.log('Direct play failed:', e));
           }
         } catch (e) {
-          // Cross-origin virheet ovat normaaleja
+          console.log('Audio enable failed:', e);
         }
       });
     }
@@ -1906,6 +1919,19 @@ const frameContent = ch
     document.addEventListener('click', enableAudio, { once: true });
     document.addEventListener('touchstart', enableAudio, { once: true });
     document.addEventListener('keydown', enableAudio, { once: true });
+    
+    // Lisää myös jatkuva kuuntelu slot-klikkauksille
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('.slot')) {
+        enableAudio();
+      }
+    });
+    
+    document.addEventListener('touchstart', function(e) {
+      if (e.target.closest('.slot')) {
+        enableAudio();
+      }
+    });
   }
 
 </script>
