@@ -324,18 +324,8 @@ body {
 }
 
 /* ───────────────────────────────────────────── */
-/* OVERLAY BASE */
-/* ------------------------------------------------ */
-
-.overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10;
-}
-
 /* OVERLAY CONTRAST ON HOVER */
-/* ------------------------------------------------ */
+/* ───────────────────────────────────────────── */
 
 .slot:hover .overlay {
   backdrop-filter: brightness(0.8);
@@ -459,7 +449,7 @@ iframe.stream-frame {
   height: 100%;
   border: none;
   display: block;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 /* Placeholder wrapper täyttää koko frame-alueen */
@@ -1099,14 +1089,6 @@ iframe.stream-frame {
     padding: 10px;
   }
   
-  /* Varmista että toolbar pysyy näkyvissä */
-  #toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: #0a0a0a;
-  }
-  
   .slot {
     min-height: 200px;
     max-height: 300px;
@@ -1149,13 +1131,36 @@ iframe.stream-frame {
     touch-action: manipulation;
   }
   
-  /* Mobiili-yksinkertaiset säännöt */
-  .stream-frame {
-    pointer-events: auto;
+  /* Estä liiallinen zoomaus mutta salli normaali käyttö */
+  body {
+    touch-action: pan-y pinch-zoom;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
   
+  /* Iframe mobiiliystävälliseksi */
+  .stream-frame {
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+  
+  /* Varmista äänitoisto mobiilissa */
   .slot {
     position: relative;
+  }
+  
+  .slot:active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(90, 255, 47, 0.1);
+    pointer-events: none;
+    animation: fadeOut 0.3s ease-out;
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
   }
 }
 </style>
@@ -1303,13 +1308,11 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
 	document.getElementById('dialogCloseBtn').onclick = closeDialog;
 
   function saveState() {
-    const state = {
+    localStorage.setItem('kick-state', JSON.stringify({
       count,
       channels: channels.slice(0, MAX),
       muted: muted.slice(0, MAX)
-    };
-    localStorage.setItem('kick-state', JSON.stringify(state));
-    console.log('State saved:', state.muted.slice(0, 3)); // Debug
+    }));
   }
 
 	// ======================================================
@@ -1332,11 +1335,9 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
   function loadState() {
     try {
       const s = JSON.parse(localStorage.getItem('kick-state') || 'null');
-      console.log('State loaded from storage:', s?.muted?.slice(0, 3)); // Debug
       if (!s) {
         // Oletus: kaikki slotit muted-tilassa vain jos ei ole aiempaa tilaa
         for (let i = 0; i < MAX; i++) muted[i] = true;
-        console.log('No state found, using defaults:', muted.slice(0, 3)); // Debug
         return;
       }
       count = s.count || 1;
@@ -1346,10 +1347,8 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
         s.muted.forEach((m, i) => { 
           if (m !== undefined) muted[i] = m; 
         });
-        console.log('Mute states restored:', muted.slice(0, 3)); // Debug
       }
     } catch(e) {
-      console.log('Error loading state:', e); // Debug
       // Virhetilanteessa älä muuta olemassa olevia mute-asetuksia
     }
   }
@@ -1391,25 +1390,17 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
       </div>
     ` : '';
 
-    const frameContent = ch
-      ? `<div class="slot" data-index="${i}">
-          <iframe class="stream-frame" 
-                  src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}&parent=localhost" 
-                  allow="autoplay; encrypted-media; fullscreen; microphone; picture-in-picture" 
-                  referrerpolicy="no-referrer-when-downgrade"
-                  style="border: none; width: 100%; height: 100%;"
-                  ${isMobile ? 'muted="false"' : ''}>
-          </iframe>
-          ${overlays}
-      </div>`
-      : `
-        <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
-          <div class="placeholder-content">
-            <div class="placeholder-circle">+</div>
-            <div class="placeholder-label">Lisää striimi</div>
-          </div>
-        </div>
-      `;
+const frameContent = ch
+  ? `<iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" allowfullscreen allow="autoplay; encrypted-media; fullscreen" loading="lazy"></iframe>
+     ${overlays}`
+  : `
+    <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
+      <div class="placeholder-content">
+        <div class="placeholder-circle">+</div>
+        <div class="placeholder-label">Lisää striimi</div>
+      </div>
+    </div>
+  `;
 
     const chatContent = ch
       ? `<div class="chat-panel ${isChat ? 'open' : ''}" id="chat-${i}">
@@ -1422,21 +1413,21 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
         ${chatContent}
       </div>
 
-      <div class="bar">
-        ${ch ? `<span class="ch-label" onclick="openTab(${i})">
-                  ${ch}
-                  <span class="link-icon">?</span>
-                </span>
-              ` : ''}
+	<div class="bar">
+	  ${ch ? `<span class="ch-label" onclick="openTab(${i})">
+				${ch}
+				<span class="link-icon">↗</span>
+			  </span>
+			` : ''}
 
-        <!-- Chat + Mute siirtyvät oikealle -->
-        ${ch ? `
-          <button class="chat-btn ${isChat ? 'active' : ''}" id="chatbtn-${i}" onclick="toggleChat(${i})">Chat</button>
-          <button class="mute-btn ${isMuted ? 'active' : ''}" onclick="toggleMute(${i})">
-            ${isMuted ? 'Unmute' : 'Mute'}
-          </button>
-        ` : ''}
-      </div>
+	  <!-- Chat + Mute siirtyvät oikealle -->
+	  ${ch ? `
+		<button class="chat-btn ${isChat ? 'active' : ''}" id="chatbtn-${i}" onclick="toggleChat(${i})">Chat</button>
+		<button class="mute-btn ${isMuted ? 'active' : ''}" onclick="toggleMute(${i})">
+		  ${isMuted ? 'Unmute' : 'Mute'}
+		</button>
+	  ` : ''}
+	</div>
     `;
   }
 
@@ -1899,51 +1890,39 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
     });
   }, 20000);
 
-  // Mobiili-äänitoiston tuki (parannettu)
+  // Mobiili-äänitoiston tuki
   if (isMobile) {
-    function enableAudio() {
+    // Lisää käyttäjän interaktiokuuntelija äänitoistolle
+    document.addEventListener('click', function enableAudio() {
+      // Yritä enable audio kaikille iframelle
       document.querySelectorAll('.stream-frame').forEach(iframe => {
         try {
-          // Aseta iframe-ominaisuudet äänitoistoa varten
-          iframe.muted = false;
-          iframe.volume = 1.0;
-          iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen');
-          
-          // Yritä useita tapoja
           if (iframe.contentWindow) {
-            iframe.contentWindow.postMessage({ action: 'play' }, '*');
-            iframe.contentWindow.postMessage({ action: 'unmute' }, '*');
             iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
-            iframe.contentWindow.postMessage({ action: 'setVolume', volume: 1.0 }, '*');
-          }
-          
-          // Yritä myös suoraan
-          if (iframe.play) {
-            iframe.play().catch(e => console.log('Direct play failed:', e));
           }
         } catch (e) {
-          console.log('Audio enable failed:', e);
+          // Cross-origin virheet ovat normaaleja
         }
       });
-    }
+      
+      // Poista kuuntelija ensimmäisen klikkauksen jälkeen
+      document.removeEventListener('click', enableAudio);
+    }, { once: true });
     
-    // Lisää kuuntelijat useisiin tapahtumiin
-    document.addEventListener('click', enableAudio, { once: true });
-    document.addEventListener('touchstart', enableAudio, { once: true });
-    document.addEventListener('keydown', enableAudio, { once: true });
-    
-    // Lisää myös jatkuva kuuntelu slot-klikkauksille
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('.slot')) {
-        enableAudio();
-      }
-    });
-    
-    document.addEventListener('touchstart', function(e) {
-      if (e.target.closest('.slot')) {
-        enableAudio();
-      }
-    });
+    // Lisää touch-kuuntelija mobiilille
+    document.addEventListener('touchstart', function enableAudioTouch() {
+      document.querySelectorAll('.stream-frame').forEach(iframe => {
+        try {
+          if (iframe.contentWindow) {
+            iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
+          }
+        } catch (e) {
+          // Cross-origin virheet ovat normaaleja
+        }
+      });
+      
+      document.removeEventListener('touchstart', enableAudioTouch);
+    }, { once: true });
   }
 
 </script>
