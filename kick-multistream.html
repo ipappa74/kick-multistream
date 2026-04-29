@@ -324,8 +324,18 @@ body {
 }
 
 /* ───────────────────────────────────────────── */
+/* OVERLAY BASE */
+/* ------------------------------------------------ */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* OVERLAY CONTRAST ON HOVER */
-/* ───────────────────────────────────────────── */
+/* ------------------------------------------------ */
 
 .slot:hover .overlay {
   backdrop-filter: brightness(0.8);
@@ -1388,7 +1398,7 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
                   referrerpolicy="no-referrer-when-downgrade"
                   ${isMobile ? 'muted="false"' : ''}>
           </iframe>
-        ${overlays}
+          ${overlays}
       </div>`
       : `
         <div class="placeholder-wrap" onclick="addStreamAt(${i})" style="cursor: pointer;">
@@ -1410,21 +1420,21 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
         ${chatContent}
       </div>
 
-	<div class="bar">
-	  ${ch ? `<span class="ch-label" onclick="openTab(${i})">
-				${ch}
-				<span class="link-icon">↗</span>
-			  </span>
-			` : ''}
+      <div class="bar">
+        ${ch ? `<span class="ch-label" onclick="openTab(${i})">
+                  ${ch}
+                  <span class="link-icon">?</span>
+                </span>
+              ` : ''}
 
-	  <!-- Chat + Mute siirtyvät oikealle -->
-	  ${ch ? `
-		<button class="chat-btn ${isChat ? 'active' : ''}" id="chatbtn-${i}" onclick="toggleChat(${i})">Chat</button>
-		<button class="mute-btn ${isMuted ? 'active' : ''}" onclick="toggleMute(${i})">
-		  ${isMuted ? 'Unmute' : 'Mute'}
-		</button>
-	  ` : ''}
-	</div>
+        <!-- Chat + Mute siirtyvät oikealle -->
+        ${ch ? `
+          <button class="chat-btn ${isChat ? 'active' : ''}" id="chatbtn-${i}" onclick="toggleChat(${i})">Chat</button>
+          <button class="mute-btn ${isMuted ? 'active' : ''}" onclick="toggleMute(${i})">
+            ${isMuted ? 'Unmute' : 'Mute'}
+          </button>
+        ` : ''}
+      </div>
     `;
   }
 
