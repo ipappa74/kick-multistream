@@ -1293,11 +1293,13 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
 	document.getElementById('dialogCloseBtn').onclick = closeDialog;
 
   function saveState() {
-    localStorage.setItem('kick-state', JSON.stringify({
+    const state = {
       count,
       channels: channels.slice(0, MAX),
       muted: muted.slice(0, MAX)
-    }));
+    };
+    localStorage.setItem('kick-state', JSON.stringify(state));
+    console.log('State saved:', state.muted.slice(0, 3)); // Debug
   }
 
 	// ======================================================
@@ -1320,9 +1322,11 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
   function loadState() {
     try {
       const s = JSON.parse(localStorage.getItem('kick-state') || 'null');
+      console.log('State loaded from storage:', s?.muted?.slice(0, 3)); // Debug
       if (!s) {
         // Oletus: kaikki slotit muted-tilassa vain jos ei ole aiempaa tilaa
         for (let i = 0; i < MAX; i++) muted[i] = true;
+        console.log('No state found, using defaults:', muted.slice(0, 3)); // Debug
         return;
       }
       count = s.count || 1;
@@ -1332,8 +1336,10 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
         s.muted.forEach((m, i) => { 
           if (m !== undefined) muted[i] = m; 
         });
+        console.log('Mute states restored:', muted.slice(0, 3)); // Debug
       }
     } catch(e) {
+      console.log('Error loading state:', e); // Debug
       // Virhetilanteessa älä muuta olemassa olevia mute-asetuksia
     }
   }
@@ -1875,19 +1881,31 @@ const frameContent = ch
     });
   }, 20000);
 
-  // Mobiili-äänitoiston tuki (yksinkertainen)
+  // Mobiili-äänitoiston tuki (parannettu)
   if (isMobile) {
-    document.addEventListener('click', function() {
+    function enableAudio() {
       document.querySelectorAll('.stream-frame').forEach(iframe => {
         try {
+          // Yritä useita tapoja
           if (iframe.contentWindow) {
             iframe.contentWindow.postMessage({ action: 'play' }, '*');
+            iframe.contentWindow.postMessage({ action: 'unmute' }, '*');
+          }
+          
+          // Yritä myös suoraan
+          if (iframe.muted !== undefined) {
+            iframe.muted = false;
           }
         } catch (e) {
           // Cross-origin virheet ovat normaaleja
         }
       });
-    }, { once: true });
+    }
+    
+    // Lisää kuuntelijat useisiin tapahtumiin
+    document.addEventListener('click', enableAudio, { once: true });
+    document.addEventListener('touchstart', enableAudio, { once: true });
+    document.addEventListener('keydown', enableAudio, { once: true });
   }
 
 </script>
