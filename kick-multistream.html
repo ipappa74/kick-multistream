@@ -1367,11 +1367,14 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
 	document.getElementById('dialogCloseBtn').onclick = closeDialog;
 
   function saveState() {
-    localStorage.setItem('kick-state', JSON.stringify({
+    const state = {
       count,
       channels: channels.slice(0, MAX),
-      muted: muted.slice(0, MAX)
-    }));
+      muted: muted.slice(0, MAX),
+      chatOpen: chatOpen.slice(0, MAX)
+    };
+    localStorage.setItem('kick-state', JSON.stringify(state));
+    console.log('State saved - mute states:', state.muted.slice(0, 3));
   }
 
 	// ======================================================
@@ -1394,21 +1397,51 @@ console.log(`${APP_META.name} v${APP_META.version} - ${APP_META.buildDate}`);
   function loadState() {
     try {
       const s = JSON.parse(localStorage.getItem('kick-state') || 'null');
+      
+      // Aseta oletusarvot ensin - kaikki slotit muted-tilassa
+      for (let i = 0; i < MAX; i++) {
+        muted[i] = true; // Oletus: aina muted päällä
+        channels[i] = '';
+        chatOpen[i] = false;
+      }
+      
       if (!s) {
-        // Oletus: kaikki slotit muted-tilassa vain jos ei ole aiempaa tilaa
-        for (let i = 0; i < MAX; i++) muted[i] = true;
+        // Ei aiempaa tilaa - käytä oletuksia
         return;
       }
+      
       count = s.count || 1;
-      s.channels.forEach((ch, i) => { channels[i] = ch || ''; });
-      // Säilytä aiemmat mute-asetukset, älä nollaa niitä
+      
+      // Lataa kanavat
+      if (s.channels) {
+        s.channels.forEach((ch, i) => { 
+          if (ch !== undefined) channels[i] = ch; 
+        });
+      }
+      
+      // Lataa mute-asetukset - säilytä käyttäjän asetukset
       if (s.muted) {
         s.muted.forEach((m, i) => { 
           if (m !== undefined) muted[i] = m; 
         });
       }
+      
+      // Lataa chat-asetukset
+      if (s.chatOpen) {
+        s.chatOpen.forEach((open, i) => { 
+          if (open !== undefined) chatOpen[i] = open; 
+        });
+      }
+      
+      console.log('State loaded - mute states:', muted.slice(0, 3));
+      
     } catch(e) {
-      // Virhetilanteessa älä muuta olemassa olevia mute-asetuksia
+      // Virhetilanteessa palauta oletusarvot
+      for (let i = 0; i < MAX; i++) {
+        muted[i] = true;
+        channels[i] = '';
+        chatOpen[i] = false;
+      }
     }
   }
 
