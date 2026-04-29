@@ -459,7 +459,7 @@ iframe.stream-frame {
   height: 100%;
   border: none;
   display: block;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 /* Placeholder wrapper täyttää koko frame-alueen */
@@ -1393,9 +1393,11 @@ console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
 
     const frameContent = ch
       ? `<div class="slot" data-index="${i}">
-          <iframe class="stream-frame" src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}" 
-                  allow="autoplay; encrypted-media; fullscreen; microphone" 
+          <iframe class="stream-frame" 
+                  src="https://player.kick.com/${ch}?autoplay=true&muted=${isMuted}&parent=localhost" 
+                  allow="autoplay; encrypted-media; fullscreen; microphone; picture-in-picture" 
                   referrerpolicy="no-referrer-when-downgrade"
+                  style="border: none; width: 100%; height: 100%;"
                   ${isMobile ? 'muted="false"' : ''}>
           </iframe>
           ${overlays}
