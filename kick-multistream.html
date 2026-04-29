@@ -1539,28 +1539,53 @@ const frameContent = ch
 
 	function renderGrid() {
 	  const grid = document.getElementById('grid');
-
-	  // Automaattinen layout-luokka
+	  
+	  // Päivitetään gridin asettelu-luokka
 	  grid.className = `stream-grid streams-${count}`;
-   
-	  grid.innerHTML = '';
 
+	  // 1. Poistetaan ylimääräiset slotit (jos count pieneni)
+	  const currentSlots = grid.querySelectorAll('.slot');
+	  currentSlots.forEach(slot => {
+		const idx = parseInt(slot.dataset.index);
+		if (idx >= count) {
+		  slot.remove();
+		}
+	  });
+
+	  // 2. Lisätään tai päivitetään slotit
 	  for (let i = 0; i < count; i++) {
-		const slot = document.createElement('div');
-		slot.className = 'slot' + (zoomedSlot === i ? ' zoomed' : '');
-		slot.id = 'slot-' + i;
+		let slot = document.getElementById('slot-' + i);
+		const channelAtSlot = channels[i] || '';
 
-		slot.setAttribute("draggable", "true");
-		slot.dataset.index = i;
+		if (!slot) {
+		  // Luodaan uusi slotti vain jos sitä ei ole olemassa
+		  slot = document.createElement('div');
+		  slot.className = 'slot';
+		  slot.id = 'slot-' + i;
+		  slot.setAttribute("draggable", "true");
+		  slot.dataset.index = i;
+		  slot.dataset.channel = channelAtSlot; // Tallennetaan nykyinen kanava muistiin
 
-		slot.addEventListener("dragstart", onDragStart);
-		slot.addEventListener("dragover", onDragOver);
-		slot.addEventListener("dragleave", onDragLeave);
-		slot.addEventListener("drop", onDrop);
-		slot.addEventListener("dragend", onDragEnd);
+		  // Lisätään event listenerit kerran
+		  slot.addEventListener("dragstart", onDragStart);
+		  slot.addEventListener("dragover", onDragOver);
+		  slot.addEventListener("dragleave", onDragLeave);
+		  slot.addEventListener("drop", onDrop);
+		  slot.addEventListener("dragend", onDragEnd);
 
-		slot.innerHTML = buildSlot(i);
-		grid.appendChild(slot);
+		  slot.innerHTML = buildSlot(i);
+		  grid.appendChild(slot);
+		} else {
+		  // Slotti on jo olemassa, tarkistetaan pitääkö sisältö päivittää
+		  // Päivitetään vain jos kanava on muuttunut, jotta iframe ei lataudu turhaan
+		  if (slot.dataset.channel !== channelAtSlot) {
+			slot.innerHTML = buildSlot(i);
+			slot.dataset.channel = channelAtSlot;
+		  }
+		  
+		  // Päivitetään zoom-luokka ilman että kosketaan sisäiseen HTML:ään
+		  slot.classList.toggle('zoomed', zoomedSlot === i);
+		}
 	  }
 	}
 
@@ -1633,20 +1658,24 @@ const frameContent = ch
     if (slot) slot.innerHTML = buildSlot(i);
   }
 
-  function toggleZoom(i) {
-    zoomedSlot = zoomedSlot === i ? -1 : i;
-    // Päivitä vain zoom-tilat, älä uudelleenrakenna koko gridiä
-    document.querySelectorAll('.slot').forEach((slot, idx) => {
-      slot.classList.toggle('zoomed', idx === zoomedSlot);
-    });
-    
-    // Päivitä myös napin tooltip ja symboli
-    const zoomBtn = document.querySelector(`#slot-${i} .zoom-btn`);
-    if (zoomBtn) {
-      zoomBtn.textContent = zoomedSlot === i ? '−' : '+';
-      zoomBtn.title = zoomedSlot === i ? 'Sulje suurennos' : 'Suurenna striimi';
-    }
-  }
+	function toggleZoom(i) {
+	  const oldZoomed = zoomedSlot;
+	  zoomedSlot = (zoomedSlot === i) ? -1 : i;
+	  
+	  // Päivitetään vain luokat, ei HTML-sisältöä
+	  document.querySelectorAll('.slot').forEach((slot, idx) => {
+		slot.classList.toggle('zoomed', idx === zoomedSlot);
+		
+		// Päivitetään zoom-napin ulkoasu vain kyseisissä sloteissa
+		if (idx === i || idx === oldZoomed) {
+		  const zoomBtn = slot.querySelector('.zoom-btn');
+		  if (zoomBtn) {
+			zoomBtn.textContent = (zoomedSlot === idx) ? '−' : '+';
+			zoomBtn.title = (zoomedSlot === idx) ? 'Sulje suurennos' : 'Suurenna striimi';
+		  }
+		}
+	  });
+	}
 
   function toggleChat(i) {
     chatOpen[i] = !chatOpen[i];
