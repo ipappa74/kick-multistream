@@ -53,7 +53,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/kick-multistream/img/favicon-16x16.png">
 <link rel="icon" href="/kick-multistream/img/favicon.ico" sizes="any">
 <link rel="manifest" href="/kick-multistream/img/site.webmanifest">
-	
+
 <style>
 /* ───────────────────────────────────────────── */
 /* GLOBAL RESET & BODY */
@@ -1070,10 +1070,84 @@ iframe.stream-frame {
     width: 200px;
   }
 }
+
+/* MOBIILI (≤ 768px) */
+/* ───────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  
+  /* Rajoita striimien määrä max 3 kpl mobiilissa */
+  .slot:nth-child(n+4) {
+    display: none;
+  }
+  
+  /* Mobiililaitteiden striimien korkeus ja asettelu */
+  .stream-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+  
+  .slot {
+    min-height: 200px;
+    max-height: 300px;
+    flex: 1;
+    width: 100%;
+  }
+  
+  /* 1 striimi - keskitä pystysuunnassa */
+  .stream-grid.streams-1 .slot {
+    max-height: 400px;
+    margin: auto;
+  }
+  
+  /* 2 striimiä - tasainen jako */
+  .stream-grid.streams-2 .slot {
+    flex: 1;
+    max-height: 250px;
+  }
+  
+  /* Mobiili-overlayjen parempi klikattavuus */
+  .overlay-btn {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+  
+  /* Mobiili-chat pienempi */
+  .chat-panel.open {
+    width: 150px;
+  }
+  
+  /* Piilota valikon vaihtoehdot 4-9 mobiilissa */
+  .lbtn:nth-child(n+4) {
+    display: none;
+  }
+  
+  /* Mobiili-napit normaalikokoisina */
+  .lbtn {
+    touch-action: manipulation;
+  }
+  
+  /* Estä zoomaus mobiilissa */
+  body {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Iframe mobiiliystävälliseksi */
+  .stream-frame {
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+}
 </style>
 
 </head>
-
 <body>
 
 <div id="toolbar">
@@ -1142,7 +1216,10 @@ const APP_META = {
 
 console.log(`${APP_META.name} v${APP_META.version} — ${APP_META.buildDate}`);
 
-  const MAX = 9;
+  // Mobiililaitteen tunnistus
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  
+  const MAX = isMobile ? 3 : 9; // Rajoita mobiilissa 3 striimiin
   let count = 1;
   let zoomedSlot = -1;
 
@@ -1795,8 +1872,6 @@ const frameContent = ch
     });
   }, 20000);
 
-  
 </script>
-
 </body>
 </html>
