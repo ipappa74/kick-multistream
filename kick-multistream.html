@@ -1087,6 +1087,25 @@ iframe.stream-frame {
     flex-direction: column;
     gap: 10px;
     padding: 10px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  /* Varmista että toolbar pysyy näkyvissä */
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: #0a0a0a;
+    flex-shrink: 0;
+  }
+  
+  /* Varmista että body asettelu oikein */
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
   }
   
   .slot {
@@ -1136,12 +1155,29 @@ iframe.stream-frame {
     touch-action: pan-y pinch-zoom;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
   }
   
-  /* Iframe mobiiliystävälliseksi */
+  /* Iframe mobiiliystävälliseksi - paranna äänitoistoa */
   .stream-frame {
     pointer-events: auto;
     touch-action: manipulation;
+    background: #000;
+  }
+  
+  /* Paranna äänitoistoa mobiilissa */
+  .slot {
+    position: relative;
+    background: #000;
+  }
+  
+  /* Lisää interaktiivisuutta äänitoistolle */
+  .slot::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: auto;
   }
   
   /* Varmista äänitoisto mobiilissa */
@@ -1893,36 +1929,50 @@ const frameContent = ch
   // Mobiili-äänitoiston tuki
   if (isMobile) {
     // Lisää käyttäjän interaktiokuuntelija äänitoistolle
-    document.addEventListener('click', function enableAudio() {
-      // Yritä enable audio kaikille iframelle
+    function enableAudioForAllFrames() {
       document.querySelectorAll('.stream-frame').forEach(iframe => {
         try {
+          // Yritä useita tapoja enable audio
           if (iframe.contentWindow) {
+            iframe.contentWindow.postMessage({ action: 'play' }, '*');
+            iframe.contentWindow.postMessage({ action: 'unmute' }, '*');
             iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
+          }
+          
+          // Yritä myös suoraan DOM-elementin kautta
+          if (iframe.play) {
+            iframe.play().catch(e => console.log('Audio play failed:', e));
           }
         } catch (e) {
           // Cross-origin virheet ovat normaaleja
         }
       });
-      
-      // Poista kuuntelija ensimmäisen klikkauksen jälkeen
+    }
+    
+    // Click-kuuntelija
+    document.addEventListener('click', function enableAudio() {
+      enableAudioForAllFrames();
       document.removeEventListener('click', enableAudio);
     }, { once: true });
     
-    // Lisää touch-kuuntelija mobiilille
-    document.addEventListener('touchstart', function enableAudioTouch() {
-      document.querySelectorAll('.stream-frame').forEach(iframe => {
-        try {
-          if (iframe.contentWindow) {
-            iframe.contentWindow.postMessage({ action: 'enableAudio' }, '*');
-          }
-        } catch (e) {
-          // Cross-origin virheet ovat normaaleja
-        }
-      });
-      
+    // Touch-kuuntelija mobiilille
+    document.addEventListener('touchstart', function enableAudioTouch(e) {
+      enableAudioForAllFrames();
       document.removeEventListener('touchstart', enableAudioTouch);
     }, { once: true });
+    
+    // Lisää myös slot-klikkaukset äänitoistolle
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('.slot')) {
+        enableAudioForAllFrames();
+      }
+    });
+    
+    document.addEventListener('touchstart', function(e) {
+      if (e.target.closest('.slot')) {
+        enableAudioForAllFrames();
+      }
+    });
   }
 
 </script>
