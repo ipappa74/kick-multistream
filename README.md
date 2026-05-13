@@ -1,9 +1,11 @@
-# Kick Multistream
-
-<p align="center">
+<p align="left">
   <img src="https://img.shields.io/badge/License-MIT-5aff2f" />
   <img src="https://img.shields.io/badge/Kick%20Theme-Neon-5aff2f" />
 </p>
+
+---
+
+# Kick Multistream
 
 ## 🎯 Yleiskuvaus
 
