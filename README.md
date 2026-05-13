@@ -3,6 +3,15 @@
   <img src="https://img.shields.io/badge/Kick%20Theme-Neon-5aff2f" />
 </p>
 
+<p>
+  <img src="https://img.shields.io/badge/HTML-E34F26?style=flat-square&logo=html5&logoColor=white" alt="HTML" />
+  <img src="https://img.shields.io/badge/CSS-1572B6?style=flat-square&logo=css3&logoColor=white" alt="CSS" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=111111" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/Kick-53FC18?style=flat-square&logoColor=111111" alt="Kick" />
+  <img src="https://img.shields.io/badge/Kick%20API-222222?style=flat-square" alt="Kick API" />
+  <img src="https://img.shields.io/badge/Zero-Backend-4F8CFF?style=flat-square" alt="Zero Backend" />
+</p>
+
 ---
 
 # Kick Multistream
