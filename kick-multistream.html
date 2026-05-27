@@ -1241,7 +1241,7 @@ const APP_META = {
 
     const chatContent = ch
       ? `<div class="chat-panel ${isChat ? 'open' : ''}" id="chat-${i}">
-           <iframe src="${isChat ? `https://kick.com/${ch}/chatroom` : 'about:blank'}" id="chat-iframe-${i}" allowfullscreen></iframe>
+           <iframe src="${isChat ? `https://kick.com/popout/${ch}/chat` : 'about:blank'}" id="chat-iframe-${i}" allowfullscreen></iframe>
          </div>` : '';
 
     return `
