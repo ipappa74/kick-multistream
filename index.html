@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Kick Multistream</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Katso useita Kick-striimejä samassa näkymässä.">
 <link rel="apple-touch-icon" sizes="180x180" href="/kick-multistream/img/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/kick-multistream/img/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/kick-multistream/img/favicon-16x16.png">
@@ -156,6 +157,7 @@ body {
 
 /* BUTTON */
 .launch-btn {
+  display: inline-block;
   margin-top: 40px;
   padding: 14px 36px;
   font-size: 20px;
@@ -165,6 +167,7 @@ body {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  text-decoration: none;
   transition: all .2s ease;
   box-shadow: 0 0 12px #5aff2f55;
 }
@@ -195,15 +198,15 @@ body {
 </div>
 
 <div class="hero">
-  <div class="title">KICK MULTISTREAM</div>
+  <h1 class="title">KICK MULTISTREAM</h1>
   <div class="subtitle">
     Kevyt, nopea monistriimaustyökalu Kick.com-alustalle.
     Katso useita striimejä, järjestele slotteja ja seuraa LIVE-tilaa reaaliajassa.
   </div>
 
-  <button class="launch-btn" onclick="location.href='kick-multistream.html'">
+  <a class="launch-btn" href="kick-multistream.html">
     Käynnistä sovellus
-  </button>
+  </a>
 </div>
 
 <div class="footer">

@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <!--
 ===========================================================
  KICK MULTISTREAM — Neon UI Edition
@@ -5,12 +6,12 @@
  Tekijä:      Toni
  Sijainti:    Oulu, Suomi
  Projekti:    Kick Multistream (HTML + CSS + JS)
- Versio:      1.1.0
- Päiväys:     2026-04-29
+ Versio:      1.1.1
+ Päiväys:     2026-07-31
 
  Kuvaus:
    Kevyt, nopea ja neon-henkinen monistriimaustyökalu
-   Kick.com-alustalle. Tukee 1–9 striimiä, chat-paneeleita,
+   Kick.com-alustalle. Tukee 1-9 striimiä, chat-paneeleita,
    drag & drop -järjestelyä, suosikkeja, LIVE-tilan seurantaa,
    katsojamääriä ja mute/unmute-tilan tallennusta.
 
@@ -42,11 +43,11 @@
 ===========================================================
 -->
 
-<!DOCTYPE html>
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Katso ja hallitse useita Kick-striimejä yhdellä sivulla.">
 <title>Kick Multistream</title>
 <link rel="apple-touch-icon" sizes="180x180" href="/kick-multistream/img/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/kick-multistream/img/favicon-32x32.png">
@@ -979,9 +980,9 @@ body {
     <p id="aboutVersion"></p>
     <p>Tekijä: Toni, Oulu</p>
     <p>
-      Kick: <a href="https://kick.com/ipappa" target="_blank">ipappa</a><br>
-      Repo: <a href="https://github.com/ipappa74/kick-multistream" target="_blank">GitHub</a><br>
-      Sivusto: <a href="https://ipappa74.github.io/kick-multistream/" target="_blank">GitHub Pages</a>
+      Kick: <a href="https://kick.com/ipappa" target="_blank" rel="noopener noreferrer">ipappa</a><br>
+      Repo: <a href="https://github.com/ipappa74/kick-multistream" target="_blank" rel="noopener noreferrer">GitHub</a><br>
+      Sivusto: <a href="https://ipappa74.github.io/kick-multistream/" target="_blank" rel="noopener noreferrer">GitHub Pages</a>
     </p>
     <button onclick="closeAbout()">Sulje</button>
   </div>
@@ -992,13 +993,13 @@ body {
 const APP_META = {
   name: "Kick Multistream",
   version: "1.1.0",
-  buildDate: "2026-04-29", // Päivitetty versio ja päiväys[cite: 1]
+  buildDate: "2026-07-31",
   author: "Toni",
   repo: "https://github.com/ipappa74/kick-multistream",
   homepage: "https://ipappa74.github.io/kick-multistream/"
 };
 
-  // Käyttäjäseuranta
+  // Paikalliset käyttötiedot ovat vain tämän selaimen localStoragessa.
   const analytics = {
     getUserId: () => {
       let userId = localStorage.getItem('kick-multistream-user-id');
@@ -1062,7 +1063,7 @@ const APP_META = {
   // Mobiililaitteen tunnistus
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
   
-  // --- GLOBAALIT MUUTTUJAT ---
+  // Sovelluksen tila
   const MAX = isMobile ? 3 : 9; 
   let count = 1;
   let zoomedSlot = -1;
@@ -1072,11 +1073,12 @@ const APP_META = {
   const liveStatus = {};
   const viewers    = {};
   let selectedSlot = null;
+  let dialogMode = 'stream';
   let favorites = JSON.parse(localStorage.getItem('kick-favs') || '[]');
   let autoLoadChannels = JSON.parse(localStorage.getItem('kick-auto-load-channels') || '{}');
   let dragSrcIndex = null;
 
-  // --- TAPAHTUMIEN DELEGOINTI (UUSI) ---[cite: 1]
+  // Vedä ja pudota -tapahtumat käsitellään yhdestä paikasta.
   const grid = document.getElementById('grid');
 
   grid.addEventListener('dragstart', (e) => {
@@ -1084,7 +1086,7 @@ const APP_META = {
     if (!slot) return;
     dragSrcIndex = Number(slot.dataset.index);
     slot.classList.add("dragging");
-    document.body.classList.add("dragging-active"); // Estää iframen hiiriongelmat[cite: 1]
+    document.body.classList.add("dragging-active");
     e.dataTransfer.effectAllowed = "move";
   });
 
@@ -1150,19 +1152,31 @@ const APP_META = {
     document.getElementById('dialogChannelInput').value = '';
   }
 
+  function normalizeChannel(value) {
+    const channel = value.trim().toLowerCase().replace(/^@/, '');
+    return /^[a-z0-9_-]{1,50}$/.test(channel) ? channel : '';
+  }
+
+  function getChatUrl(channel) {
+    return `https://kick.com/popout/${encodeURIComponent(channel)}/chat`;
+  }
+
   document.getElementById('dialogLoadBtn').onclick = () => {
-    const val = document.getElementById('dialogChannelInput').value.trim();
-    if(!val) return;
+    const value = document.getElementById('dialogChannelInput').value;
+    const channel = normalizeChannel(value);
+    if (!channel) {
+      window.alert('Anna kelvollinen Kick-kanavan nimi.');
+      return;
+    }
 
     if(dialogMode === 'stream'){
-    channels[selectedSlot] = val;
+    channels[selectedSlot] = channel;
     if (muted[selectedSlot] === undefined) muted[selectedSlot] = true;
     } else if (dialogMode === 'favorite') {
-    const ch = val.toLowerCase().replace(/^@/, '');
-    if (ch && !favorites.includes(ch)) {
-      favorites.push(ch);
+    if (!favorites.includes(channel)) {
+      favorites.push(channel);
       localStorage.setItem('kick-favs', JSON.stringify(favorites));
-      checkLiveFavOnly(ch);
+      checkLiveFavOnly(channel);
       renderFavorites();
     }
     }
@@ -1207,7 +1221,9 @@ const APP_META = {
       }
       if (!s) return;
       count = s.count || 1;
-      if (s.channels) s.channels.forEach((ch, i) => { if (ch !== undefined) channels[i] = ch; });
+      if (s.channels) s.channels.forEach((ch, i) => {
+        if (ch !== undefined && i < MAX) channels[i] = normalizeChannel(String(ch));
+      });
       if (s.muted) s.muted.forEach((m, i) => { if (m !== undefined) muted[i] = m; });
       if (s.chatOpen) s.chatOpen.forEach((open, i) => { if (open !== undefined) chatOpen[i] = open; });
     } catch(e) {
@@ -1268,7 +1284,7 @@ const APP_META = {
 
     const chatContent = ch
       ? `<div class="chat-panel ${isChat ? 'open' : ''}" id="chat-${i}">
-           <iframe src="${isChat ? `https://kick.com/popout/${ch}/chat` : 'about:blank'}" id="chat-iframe-${i}" allowfullscreen></iframe>
+           <iframe src="${isChat ? getChatUrl(ch) : 'about:blank'}" id="chat-iframe-${i}" title="${ch}-kanavan chat" loading="lazy"></iframe>
          </div>` : '';
 
     return `
@@ -1324,7 +1340,8 @@ const APP_META = {
 
   function load(i, ch) {
     const inp = document.getElementById('inp-' + i);
-    const channel = (ch !== undefined ? ch : inp.value).trim().toLowerCase().replace(/^@/, '');
+    const channel = normalizeChannel(ch !== undefined ? ch : (inp?.value || ''));
+    if (!channel && ch === undefined) return;
     if (inp) inp.value = channel;
     channels[i] = channel;
     if (muted[i] === undefined) muted[i] = true;
@@ -1391,7 +1408,7 @@ const APP_META = {
     if (chatOpen[i]) {
       const iframe = document.getElementById('chat-iframe-' + i);
       const ch = channels[i];
-      if (iframe && iframe.src === 'about:blank' && ch) iframe.src = `https://kick.com/${ch}/chatroom`;
+      if (iframe && ch) iframe.src = getChatUrl(ch);
     }
   }
 
@@ -1452,7 +1469,7 @@ const APP_META = {
     for (let i = 0; i < count; i++) {
       if (channels[i]) {
         await checkLive(channels[i], i);
-        await new Promise(r => setTimeout(r, 500)); // Rate-limiting[cite: 1]
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     for (const fav of favorites) {
@@ -1507,7 +1524,7 @@ const APP_META = {
   loadState();
   checkAllLive(); 
 
-  // Pidennetty tarkistusväli (60s) resurssien säästämiseksi[cite: 1]
+  // Päivitä LIVE-tila kerran minuutissa.
   setInterval(checkAllLive, 60000);
 
   // Mobiili-äänitoiston tuki
